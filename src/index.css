@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/* Палитра тёмной темы (значения из дизайн-гайда) */
+@theme {
+  --color-app: #0f1115;          /* основной фон */
+  --color-surface: #1a1d24;      /* карточки, панели */
+  --color-line: #2a2f3a;         /* границы */
+  --color-fg: #e5e7eb;           /* основной текст */
+  --color-muted: #9ca3af;        /* приглушённый текст */
+  --color-accent: #3b82f6;       /* акцент (синий) */
+  --color-accent-hover: #2563eb; /* акцент при наведении */
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100vh;
+  }
+
+  body {
+    background-color: var(--color-app);
+    color: var(--color-fg);
+  }
+}
