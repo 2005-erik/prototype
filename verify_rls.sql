@@ -218,6 +218,28 @@ begin
   raise notice 'OK A3: auth_log защищён (admin-select, запись только через log_auth_event)';
 end $$;
 
+-- ---- admin_activity: RLS, select только admin, нет клиентской записи ----
+do $$
+begin
+  if not (select relrowsecurity from pg_class where oid='public.admin_activity'::regclass) then
+    raise exception 'FAIL: RLS выключен на admin_activity';
+  end if;
+  if exists (select 1 from pg_policies
+             where schemaname='public' and tablename='admin_activity'
+               and cmd in ('INSERT','UPDATE','DELETE')) then
+    raise exception 'FAIL: у admin_activity есть клиентская политика записи';
+  end if;
+  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                 where n.nspname='public' and p.proname='log_admin_action' and p.prosecdef) then
+    raise exception 'FAIL: нет log_admin_action() SECURITY DEFINER';
+  end if;
+  if exists (select 1 from pg_roles where rolname='anon')
+     and has_function_privilege('anon','public.log_admin_action(text,uuid,jsonb)','execute') then
+    raise exception 'FAIL: anon может вызывать log_admin_action';
+  end if;
+  raise notice 'OK: admin_activity защищён (admin-select, запись через service_role/log_admin_action)';
+end $$;
+
 -- ---- Отсутствие клиентской записи в защищённые таблицы ----
 do $$
 declare t text;

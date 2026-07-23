@@ -53,6 +53,14 @@ Deno.serve(async (req: Request) => {
   // Явный отзыв сессий (официальный путь; A1-триггер уже снял их — defense-in-depth)
   await svc.auth.admin.signOut(userId, 'global').catch(() => {})
 
+  // Журнал административного действия
+  await svc.from('admin_activity').insert({
+    actor_id: callerId,
+    action: 'user_deactivated',
+    target_user_id: userId,
+    details: { reassigned, reassign_to: reassignTo },
+  })
+
   // Пользователь НЕ удаляется — задачи, история и активность сохраняются.
   return json({ success: true, reassigned })
 })

@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
   // Проверка прав администратора
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
-  const { svc } = auth
+  const { svc, callerId } = auth
 
   let body: Record<string, unknown>
   try {
@@ -98,6 +98,14 @@ Deno.serve(async (req: Request) => {
       )
     }
   }
+
+  // Журнал административного действия
+  await svc.from('admin_activity').insert({
+    actor_id: callerId,
+    action: 'user_invited',
+    target_user_id: userId,
+    details: { email, role },
+  })
 
   return json({ success: true, user_id: userId })
 })

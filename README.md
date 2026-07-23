@@ -1,78 +1,75 @@
-# Прототип — корпоративный таск-менеджер
+<!-- Language: **English** · [Русский](README.ru.md) -->
 
-React 19 + Vite + Supabase (Postgres + Auth + Realtime + Storage + Edge Functions).
+# TaskFlow
 
-## Запуск фронтенда
+Internal task-management system with role-based workflow, deadline control, and process analytics.
 
-```bash
-npm install
-npm run dev      # http://localhost:5173
-npm run build    # прод-сборка
-npm run lint
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38bdf8?logo=tailwindcss&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3fcf8e?logo=supabase&logoColor=white)
+
+## Purpose
+
+A corporate task-management system built for a single department rather than a whole company. A manager assigns work and tracks how it progresses; an employee runs their own queue and moves tasks through their statuses. It covers the parts that generic trackers leave out: a clear split of responsibilities between manager and employee, active deadline control, and analytics on the work process itself — not just a list of cards.
+
+## Who it's for
+
+An internal tool for one organization, not a public service. Access is by invitation only and open sign-up is disabled. There are three roles:
+
+- **Administrator** — runs the system and its users.
+- **Manager** — plans work and oversees the team.
+- **Employee** — carries out assigned tasks.
+
+## Roles and capabilities
+
+| Role | What they do |
+| --- | --- |
+| **Administrator** | Manage users and invitations · assign and change roles · review the access audit trail |
+| **Manager** | Create tasks and set deadlines · assign owners and balance the team's workload · read process analytics · export reports |
+| **Employee** | Work a personal queue prioritized by deadline · change task status · leave comments and attach files |
+
+## Key features
+
+- Kanban board with configurable statuses
+- Deadline control with color-coded urgency
+- Rework tracking — tasks sent back for revision are counted, not hidden
+- Process analytics that surface where work stalls
+- Real-time view of each employee's current workload
+- Notifications and live updates across sessions
+- Report export
+- Access rules enforced at the database level
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Client["Web client (SPA)"] --> BaaS["Backend platform"]
+    subgraph BaaS
+      Auth["Authentication"]
+      DB["Database<br/>(access rules)"]
+      RT["Real-time"]
+      Store["File storage"]
+      Fn["Server functions"]
+    end
 ```
 
-Переменные окружения — в `.env.local` (не коммитится):
+The client is a single-page app; everything behind it runs on a managed backend platform. Business logic and access rules live in the database itself, so permissions are enforced on the server and the client can't bypass them — it only ever sees the data a given role is allowed to see. Privileged operations run through server-side functions rather than trusting the browser.
 
-```
-VITE_SUPABASE_URL=...
-VITE_SUPABASE_ANON_KEY=...      # publishable/anon ключ (публичный)
-```
+## Stack
 
-> `service_role` ключ на фронтенде НЕ используется и не должен туда попадать.
-> Все привилегированные операции — только в Edge Functions.
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19 + Vite |
+| Styling | Tailwind CSS v4 |
+| Routing & state | React Router, React hooks |
+| Charts | Recharts |
+| Drag & drop | dnd kit |
+| Backend | Supabase (managed platform) |
+| Database | PostgreSQL |
+| Authentication | Supabase Auth |
+| Hosting | Static frontend + managed backend |
 
-## Миграции БД
+## Status
 
-```bash
-supabase db push
-```
-
-Проверка RLS/безопасности после применения:
-
-```bash
-supabase db execute -f verify_rls.sql   # ассерты падают, если фикс не применён
-```
-
-Аудит безопасности и статус находок — в `SECURITY_AUDIT.md`.
-
-## Edge Functions (деплоятся отдельно)
-
-Функции в `supabase/functions/`:
-
-| Функция | Назначение |
-|---|---|
-| `invite-user` | Приглашение сотрудника (admin) |
-| `deactivate-user` | Деактивация + переназначение задач + отзыв сессий (admin) |
-| `reset-user-password` | Письмо сброса пароля + флаг must_change_password (admin) |
-| `list-users` | Список пользователей с email (admin) |
-
-Все проверяют JWT вызывающего и роль `admin` вручную (`_shared/utils.ts`), т.к.
-`service_role` обходит RLS.
-
-### Деплой
-
-```bash
-# один раз: залогиниться и связать проект
-supabase login
-supabase link --project-ref <PROJECT_REF>
-
-# задать секрет (боевой домен для redirectTo в письмах)
-supabase secrets set SITE_URL=https://your-app.example.com
-# SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY инжектятся автоматически
-
-# деплой всех функций
-supabase functions deploy invite-user
-supabase functions deploy deactivate-user
-supabase functions deploy reset-user-password
-supabase functions deploy list-users
-```
-
-Для отправки писем (приглашение/сброс) в проекте должен быть настроен **SMTP**
-(Dashboard → Authentication → Emails). Прод-настройки auth — см. чек-лист в
-`SECURITY_AUDIT.md` (раздел M2).
-
-### Локальный запуск функций
-
-```bash
-supabase functions serve --env-file supabase/.env.local
-```
+Working prototype under active development.

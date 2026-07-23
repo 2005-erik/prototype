@@ -107,6 +107,7 @@ export default function UsersAdminPage() {
     updateUser,
     setUserProjects,
     countActiveTasks,
+    logAdminAction,
   } = useUserAdmin()
   const { projects } = useProjects()
 
@@ -181,9 +182,26 @@ export default function UsersAdminPage() {
     setRoleBusy(false)
     if (err) toast.error(err)
     else {
+      logAdminAction('role_changed', pendingRole.user.id, {
+        from: pendingRole.user.role,
+        to: pendingRole.newRole,
+      })
       toast.success('Роль изменена')
       setPendingRole(null)
     }
+  }
+
+  // Правка профиля / проекты — с логированием
+  const handleEditSave = async (patch) => {
+    const res = await updateUser(editUser.id, patch)
+    if (!res.error) logAdminAction('user_edited', editUser.id, patch)
+    return res
+  }
+  const handleProjectsSave = async (ids) => {
+    const res = await setUserProjects(projectsUser.id, ids)
+    if (!res.error)
+      logAdminAction('projects_changed', projectsUser.id, { count: ids.length })
+    return res
   }
 
   const confirmReset = async () => {
@@ -223,9 +241,13 @@ export default function UsersAdminPage() {
       }
       openDeactivate(u)
     } else {
-      activateUser(u.id).then(({ error: err }) =>
-        err ? toast.error(err) : toast.success('Активирован')
-      )
+      activateUser(u.id).then(({ error: err }) => {
+        if (err) toast.error(err)
+        else {
+          logAdminAction('user_activated', u.id)
+          toast.success('Активирован')
+        }
+      })
     }
   }
 
@@ -377,7 +399,7 @@ export default function UsersAdminPage() {
       {editUser && (
         <EditUserModal
           user={editUser}
-          onSave={(patch) => updateUser(editUser.id, patch)}
+          onSave={handleEditSave}
           onClose={() => setEditUser(null)}
         />
       )}
@@ -385,7 +407,7 @@ export default function UsersAdminPage() {
         <ManageProjectsModal
           user={projectsUser}
           projects={projects}
-          onSave={(ids) => setUserProjects(projectsUser.id, ids)}
+          onSave={handleProjectsSave}
           onClose={() => setProjectsUser(null)}
         />
       )}

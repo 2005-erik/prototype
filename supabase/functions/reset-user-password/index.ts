@@ -10,7 +10,7 @@ Deno.serve(async (req: Request) => {
 
   const auth = await requireAdmin(req)
   if (auth.error) return auth.error
-  const { svc } = auth
+  const { svc, callerId } = auth
 
   let body: Record<string, unknown>
   try {
@@ -40,6 +40,14 @@ Deno.serve(async (req: Request) => {
     .from('profiles')
     .update({ must_change_password: true })
     .eq('id', userId)
+  // Журнал административного действия
+  await svc.from('admin_activity').insert({
+    actor_id: callerId,
+    action: 'password_reset',
+    target_user_id: userId,
+    details: { email },
+  })
+
   if (profErr) {
     return json(
       { success: true, warning: 'Письмо отправлено, флаг не выставлен' },

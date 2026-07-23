@@ -162,6 +162,19 @@ export function useUserAdmin() {
     [fetchUsers]
   )
 
+  // Логирование клиентского действия администратора (RPC, SECURITY DEFINER)
+  const logAdminAction = useCallback(async (action, targetId, details) => {
+    try {
+      await supabase.rpc('log_admin_action', {
+        p_action: action,
+        p_target: targetId ?? null,
+        p_details: details ?? null,
+      })
+    } catch {
+      /* логирование не должно ломать действие */
+    }
+  }, [])
+
   // Число активных (незавершённых) задач пользователя — для диалога деактивации
   const countActiveTasks = useCallback(async (userId) => {
     const { count } = await supabase
@@ -184,5 +197,6 @@ export function useUserAdmin() {
     updateUser,
     setUserProjects,
     countActiveTasks,
+    logAdminAction,
   }
 }
