@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Clock,
   AlertTriangle,
+  ScrollText,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -263,6 +264,7 @@ export default function AppLayout() {
 
   if (isAdmin) {
     nav.push({ to: '/admin/users', label: 'Пользователи', icon: Settings })
+    nav.push({ to: '/admin/auth-log', label: 'Журнал входов', icon: ScrollText })
   }
 
   // Заголовок текущей страницы
@@ -274,7 +276,9 @@ export default function AppLayout() {
     '/team': 'Сотрудники',
     '/analytics': 'Аналитика',
     '/my-tasks': 'Мои задачи',
+    '/profile': 'Профиль',
     '/admin/users': 'Пользователи',
+    '/admin/auth-log': 'Журнал входов',
   }
   const pageTitle =
     titleMap[location.pathname] ??
@@ -403,10 +407,14 @@ export default function AppLayout() {
 
         {/* Низ: профиль + выход */}
         <div className="border-t border-line p-2">
-          <div
-            className={`flex items-center gap-3 rounded-lg px-2 py-2 ${
-              collapsed ? 'justify-center' : ''
-            }`}
+          <NavLink
+            to="/profile"
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-lg px-2 py-2 transition hover:bg-line ${
+                collapsed ? 'justify-center' : ''
+              } ${isActive ? 'bg-line' : ''}`
+            }
+            title="Профиль"
           >
             {profile?.avatar_url ? (
               <img
@@ -431,7 +439,7 @@ export default function AppLayout() {
                 )}
               </div>
             )}
-          </div>
+          </NavLink>
 
           {/* Личная загрузка */}
           {!collapsed && <PersonalWorkload />}

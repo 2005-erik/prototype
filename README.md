@@ -1,16 +1,78 @@
-# React + Vite
+# Прототип — корпоративный таск-менеджер
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite + Supabase (Postgres + Auth + Realtime + Storage + Edge Functions).
 
-Currently, two official plugins are available:
+## Запуск фронтенда
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # прод-сборка
+npm run lint
+```
 
-## React Compiler
+Переменные окружения — в `.env.local` (не коммитится):
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...      # publishable/anon ключ (публичный)
+```
 
-## Expanding the Oxlint configuration
+> `service_role` ключ на фронтенде НЕ используется и не должен туда попадать.
+> Все привилегированные операции — только в Edge Functions.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Миграции БД
+
+```bash
+supabase db push
+```
+
+Проверка RLS/безопасности после применения:
+
+```bash
+supabase db execute -f verify_rls.sql   # ассерты падают, если фикс не применён
+```
+
+Аудит безопасности и статус находок — в `SECURITY_AUDIT.md`.
+
+## Edge Functions (деплоятся отдельно)
+
+Функции в `supabase/functions/`:
+
+| Функция | Назначение |
+|---|---|
+| `invite-user` | Приглашение сотрудника (admin) |
+| `deactivate-user` | Деактивация + переназначение задач + отзыв сессий (admin) |
+| `reset-user-password` | Письмо сброса пароля + флаг must_change_password (admin) |
+| `list-users` | Список пользователей с email (admin) |
+
+Все проверяют JWT вызывающего и роль `admin` вручную (`_shared/utils.ts`), т.к.
+`service_role` обходит RLS.
+
+### Деплой
+
+```bash
+# один раз: залогиниться и связать проект
+supabase login
+supabase link --project-ref <PROJECT_REF>
+
+# задать секрет (боевой домен для redirectTo в письмах)
+supabase secrets set SITE_URL=https://your-app.example.com
+# SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY инжектятся автоматически
+
+# деплой всех функций
+supabase functions deploy invite-user
+supabase functions deploy deactivate-user
+supabase functions deploy reset-user-password
+supabase functions deploy list-users
+```
+
+Для отправки писем (приглашение/сброс) в проекте должен быть настроен **SMTP**
+(Dashboard → Authentication → Emails). Прод-настройки auth — см. чек-лист в
+`SECURITY_AUDIT.md` (раздел M2).
+
+### Локальный запуск функций
+
+```bash
+supabase functions serve --env-file supabase/.env.local
+```

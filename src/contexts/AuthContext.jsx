@@ -101,27 +101,95 @@ export function AuthProvider({ children }) {
     }
   }, [loadProfile])
 
-  // Вход по email/паролю
-  const signIn = useCallback(async (email, password) => {
-    setError(null)
+  // Realtime: мгновенная реакция на деактивацию своего профиля
+  useEffect(() => {
+    const uid = user?.id
+    if (!uid) return
+
+    const channel = supabase
+      .channel(`self-profile:${uid}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${uid}`,
+        },
+        (payload) => {
+          if (payload.new?.is_active === false) {
+            supabase.auth.signOut().finally(() => {
+              if (!mountedRef.current) return
+              setUser(null)
+              setProfile(null)
+              setError(
+                'Ваша учётная запись деактивирована. Обратитесь к администратору.'
+              )
+            })
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id])
+
+  // Журнал события аутентификации (не должен ломать вход/выход).
+  // IP на клиенте недоступен надёжно → null; реальный IP/failed_login —
+  // через серверный Auth Hook (service_role).
+  const logAuth = useCallback(async (action) => {
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      await supabase.rpc('log_auth_event', {
+        p_action: action,
+        p_ip: null,
+        p_ua: typeof navigator !== 'undefined' ? navigator.userAgent : null,
       })
-      if (signInError) throw signInError
-      return { error: null }
-    } catch (err) {
-      const message = err.message ?? 'Не удалось войти'
-      if (mountedRef.current) setError(message)
-      return { error: message }
+    } catch {
+      // тихо игнорируем — логирование не критично для потока
     }
   }, [])
+
+  // Вход по email/паролю
+  const signIn = useCallback(
+    async (email, password) => {
+      setError(null)
+      try {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (signInError) throw signInError
+        // Сессия уже установлена → лог идёт от имени вошедшего
+        await logAuth('login')
+        return { error: null }
+      } catch (err) {
+        // Неудачный вход: логируем через отдельную функцию (доступна anon),
+        // т.к. сессии нет. Email берём из формы.
+        try {
+          await supabase.rpc('log_failed_login', {
+            p_email: email,
+            p_ip: null,
+            p_ua: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+          })
+        } catch {
+          /* логирование не критично */
+        }
+        const message = err.message ?? 'Не удалось войти'
+        if (mountedRef.current) setError(message)
+        return { error: message }
+      }
+    },
+    [logAuth]
+  )
 
   // Выход из системы
   const signOut = useCallback(async () => {
     setError(null)
     try {
+      // Логируем ДО signOut, пока сессия ещё валидна
+      await logAuth('logout')
       const { error: signOutError } = await supabase.auth.signOut()
       if (signOutError) throw signOutError
       return { error: null }
@@ -130,7 +198,7 @@ export function AuthProvider({ children }) {
       if (mountedRef.current) setError(message)
       return { error: message }
     }
-  }, [])
+  }, [logAuth])
 
   // Обновление собственного профиля
   const updateProfile = useCallback(
@@ -166,11 +234,12 @@ export function AuthProvider({ children }) {
       signIn,
       signOut,
       updateProfile,
+      logAuth, // для события 'password_changed' из будущей /set-password
       isAdmin: role === 'admin',
       isManager: role === 'admin' || role === 'manager',
       isEmployee: role === 'employee',
     }
-  }, [user, profile, loading, error, signIn, signOut, updateProfile])
+  }, [user, profile, loading, error, signIn, signOut, updateProfile, logAuth])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

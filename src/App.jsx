@@ -3,6 +3,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RoleHomePage from './pages/RoleHomePage'
+import SetPasswordPage from './pages/SetPasswordPage'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectSettingsPage from './pages/ProjectSettingsPage'
 import BoardPage from './pages/BoardPage'
@@ -11,6 +12,8 @@ import MyTasksPage from './pages/MyTasksPage'
 import TeamPage from './pages/TeamPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import UsersAdminPage from './pages/UsersAdminPage'
+import AuthLogPage from './pages/AuthLogPage'
+import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
 
 // Роли для доски/аналитики/команды
@@ -25,6 +28,9 @@ function App() {
 
         {/* Защищённая зона: сессия обязательна, общий каркас с сайдбаром */}
         <Route element={<ProtectedRoute />}>
+          {/* Установка пароля — без сайдбара (по ссылке из письма / принудительно) */}
+          <Route path="/set-password" element={<SetPasswordPage />} />
+
           <Route element={<AppLayout />}>
             {/* Главная — зависит от роли */}
             <Route path="/" element={<RoleHomePage />} />
@@ -58,6 +64,9 @@ function App() {
             {/* Задача — все роли */}
             <Route path="/task/:taskId" element={<TaskPage />} />
 
+            {/* Профиль — все роли */}
+            <Route path="/profile" element={<ProfilePage />} />
+
             {/* Мои задачи — все роли */}
             <Route path="/my-tasks" element={<MyTasksPage />} />
 
@@ -87,6 +96,16 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <UsersAdminPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Журнал входов — только admin */}
+            <Route
+              path="/admin/auth-log"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AuthLogPage />
                 </ProtectedRoute>
               }
             />
