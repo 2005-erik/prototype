@@ -164,6 +164,60 @@ begin
   raise notice 'OK S1/S2: прямой вызов track_status_duration/check_deadlines клиентом закрыт';
 end $$;
 
+-- ---- A1: деактивация enforced на сервере ----
+do $$
+begin
+  -- хелпер is_active_user()
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname='public' and p.proname='is_active_user' and p.prosecdef
+  ) then
+    raise exception 'FAIL A1: нет is_active_user() SECURITY DEFINER';
+  end if;
+  -- гейт активности встроен в helpers доступа
+  if not exists (select 1 from pg_proc where proname='is_project_member' and prosrc like '%is_active_user%') then
+    raise exception 'FAIL A1: is_project_member не учитывает is_active_user';
+  end if;
+  if not exists (select 1 from pg_proc where proname='is_project_manager' and prosrc like '%is_active_user%') then
+    raise exception 'FAIL A1: is_project_manager не учитывает is_active_user';
+  end if;
+  -- change_task_status содержит гард
+  if not exists (select 1 from pg_proc where proname='change_task_status' and prosrc like '%is_active_user%') then
+    raise exception 'FAIL A1: change_task_status без гарда деактивации';
+  end if;
+  -- триггер отзыва сессий
+  if not exists (select 1 from pg_trigger where tgname='trg_revoke_sessions' and not tgisinternal) then
+    raise exception 'FAIL A1: нет триггера отзыва сессий';
+  end if;
+  raise notice 'OK A1: is_active-гейт, гард RPC и отзыв сессий на месте';
+end $$;
+
+-- ---- auth_log: RLS, select только admin, нет клиентской записи ----
+do $$
+begin
+  if not (select relrowsecurity from pg_class where oid='public.auth_log'::regclass) then
+    raise exception 'FAIL A3: RLS выключен на auth_log';
+  end if;
+  if exists (select 1 from pg_policies
+             where schemaname='public' and tablename='auth_log'
+               and cmd in ('INSERT','UPDATE','DELETE')) then
+    raise exception 'FAIL A3: у auth_log есть клиентская политика записи/изменения';
+  end if;
+  if not exists (select 1 from pg_policies
+                 where schemaname='public' and tablename='auth_log' and cmd='SELECT') then
+    raise exception 'FAIL A3: нет select-политики на auth_log';
+  end if;
+  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+                 where n.nspname='public' and p.proname='log_auth_event' and p.prosecdef) then
+    raise exception 'FAIL A3: нет log_auth_event() SECURITY DEFINER';
+  end if;
+  if exists (select 1 from pg_roles where rolname='anon')
+     and has_function_privilege('anon','public.log_auth_event(text,text,text)','execute') then
+    raise exception 'FAIL A3: anon может вызывать log_auth_event';
+  end if;
+  raise notice 'OK A3: auth_log защищён (admin-select, запись только через log_auth_event)';
+end $$;
+
 -- ---- Отсутствие клиентской записи в защищённые таблицы ----
 do $$
 declare t text;
@@ -317,5 +371,37 @@ begin;
     end if;
     raise notice 'OK D: комментарии/вложения чужой задачи недоступны';
   end $$;
+rollback;
+
+-- (E, A1) Деактивированный пользователь: доступ отрезан на сервере.
+--   :deact — user_id пользователя с profiles.is_active = false
+--   :deactTask — задача, где assignee = :deact (в проекте, где он состоял)
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":":deact","role":"authenticated"}';
+  do $$
+  declare np int; nt int; nn int; nself int;
+  begin
+    select count(*) into np from public.projects;          -- ожидается 0
+    select count(*) into nt from public.tasks;             -- ожидается 0
+    select count(*) into nn from public.notifications;     -- ожидается 0
+    select count(*) into nself from public.profiles where id = ':deact'; -- ожидается 1 (свой профиль)
+    if np <> 0 or nt <> 0 or nn <> 0 then
+      raise exception 'FAIL A1: деактивированный видит projects=% tasks=% notif=%', np, nt, nn;
+    end if;
+    if nself <> 1 then
+      raise exception 'FAIL A1: деактивированный не видит даже свой профиль (сломает UX)';
+    end if;
+    raise notice 'OK A1: деактивированный видит только свой профиль, данных приложения — 0';
+  end $$;
+rollback;
+
+-- (F, A1) Деактивированный не может сменить статус даже своей задачи
+begin;
+  set local role authenticated;
+  set local request.jwt.claims = '{"sub":":deact","role":"authenticated"}';
+  -- ОЖИДАЕТСЯ: ERROR «Учётная запись деактивирована»
+  select public.change_task_status(':deactTask',
+    (select status_id from public.tasks where id=':deactTask'), null);
 rollback;
 */

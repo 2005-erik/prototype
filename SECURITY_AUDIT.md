@@ -432,6 +432,17 @@ SECURITY DEFINER, без проверки прав, EXECUTE у `authenticated`. 
   1. **Отзыв сессии при деактивации:** админ-действие вызывает Supabase Admin API `auth.admin.signOut(user_id, 'global')` (или удаление refresh-токенов) через Edge Function на `service_role`.
   2. **Гейт в RLS:** хелпер `is_current_user_active()` (SECURITY DEFINER: `select is_active from profiles where id = auth.uid()`) и включить `and public.is_current_user_active()` в `is_project_member`/`is_project_manager`/`current_user_role` — тогда даже с валидным токеном деактивированный не читает проекты/задачи.
 
+### ✅ Устранено A1 (миграция `20260723000005_deactivation_enforcement.sql`)
+
+- **Гейт активности:** новый `is_active_user()` (SECURITY DEFINER). `current_user_role()` → NULL для неактивного; `is_project_member()`/`is_project_manager()` → `false`, если `is_active = false`. Это отрезает деактивированному **все** member/manager-gated политики (projects/tasks/statuses/comments/attachments/checklist/task_activity/project_members/storage), а также аналитические RPC (invoker) и `get_employee_stats` (гейт менеджера).
+- **Identity-политики** (доступ по `= auth.uid()`) пересозданы с `is_active_user()`: `tasks_update` (ветка assignee), `comments_update/delete`, `notifications_select/update/delete`, `profiles_update`. `profiles_select` → активный видит всех; деактивированный — **только свой** профиль (чтобы клиент распознал деактивацию и вышел).
+- **`change_task_status`** — гард `if not is_active_user() then raise exception 'Учётная запись деактивирована'` (закрывает и ветку «я исполнитель», и прямой вызов RPC).
+- **Отзыв сессий:** триггер `trg_revoke_sessions` (`after update of is_active on profiles`) при `true → false` делает `delete from auth.sessions where user_id = …` → refresh-токены снимаются каскадно; новый access-токен не выдать, а действующий (≤1 ч) обесценен RLS-гейтом. Отдельная Edge Function не нужна — отзыв идёт при обычном `update profiles set is_active=false` админом.
+- **Edge Functions:** собственных нет; любая будущая обязана проверять `is_active` (или полагаться на отозванную сессию — токен деактивированного невалиден). Отмечено в плане.
+- **Данные деактивированного остаются в БД:** гейт режет доступ только самому деактивированному; для активных пользователей его задачи/история/имя видны как прежде (профиль не удаляется, `is_active` лишь флаг).
+
+**Проверка:** `verify_rls.sql` — авто-ассерты (наличие `is_active_user`, встроенность в helpers, гард в `change_task_status`, триггер) + ручные тесты E/F (деактивированный видит только свой профиль и 0 данных; `change_task_status` → exception).
+
 ### 🔵 A5 (Низко) — сложность пароля не задана
 `password_requirements = ""` — принимается любой пароль ≥10 символов (напр. `aaaaaaaaaa`). **Фикс:** задать требования (в config.toml/дашборде — буквы+цифры или lower+upper+digits+symbols).
 
@@ -476,7 +487,7 @@ Rate-limit по IP есть, но распределённый перебор с
 
 | ID | Раздел | Критичность | Статус | Суть |
 |---|---|---|---|---|
-| **A1** | Auth | 🟠 Высоко | ⛔ Открыто | Деактивация не enforced на сервере (`is_active` вне RLS, сессия не отзывается) |
+| **A1** | Auth | 🟠 Высоко | ✅ Устранено | Деактивация enforced: `is_active`-гейт в RLS + гард RPC + отзыв сессий |
 | H1 | RLS tasks | 🟠 Высоко | ✅ Устранено | employee мог менять любые поля задачи |
 | **A2** | Аудит | 🟡 Средне | ⛔ Открыто | Неполное логирование (проект/участники/комментарии/вложения/поля) |
 | **A4** | Compliance | 🟡 Средне | ⛔ Открыто | Нет off-boarding/erasure; FK RESTRICT; `is_active` не режет доступ |
