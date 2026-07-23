@@ -8,7 +8,7 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { Plus, Search, RotateCcw } from 'lucide-react'
+import { Plus, Search, RotateCcw, KanbanSquare } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProjects, useProject, useWorkload } from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
@@ -19,6 +19,10 @@ import TaskCard from './TaskCard'
 import StatusCommentModal from './StatusCommentModal'
 import TaskDrawer from '../task/TaskDrawer'
 import CreateTaskModal from '../task/CreateTaskModal'
+import Button from '../ui/Button'
+import EmptyState from '../ui/EmptyState'
+import Skeleton from '../ui/Skeleton'
+import { useToast } from '../ui/Toast'
 
 const POS_STEP = 1000
 
@@ -37,11 +41,14 @@ export default function BoardPage() {
   const { projectId: paramId } = useParams()
   const navigate = useNavigate()
   const { isManager } = useAuth()
+  const { toast } = useToast()
 
-  const { projects, loading: projectsLoading } = useProjects()
+  const { projects, loading: projectsLoading, error: projectsError } =
+    useProjects()
   const activeProjectId = paramId ?? projects[0]?.id ?? null
 
-  const { project, statuses, members } = useProject(activeProjectId)
+  const { project, statuses, members, error: projectError } =
+    useProject(activeProjectId)
   const { workload } = useWorkload(activeProjectId)
 
   // ---- Фильтры ----
@@ -57,14 +64,29 @@ export default function BoardPage() {
     return () => clearTimeout(t)
   }, [search])
 
-  const { tasks, loading, moveTask, changeStatus, createTask } = useTasks(
-    activeProjectId,
-    {
-      priority,
-      search: debouncedSearch,
-      showCompleted,
-    }
-  )
+  const {
+    tasks,
+    loading,
+    error: tasksError,
+    moveTask,
+    changeStatus,
+    createTask,
+  } = useTasks(activeProjectId, {
+    priority,
+    search: debouncedSearch,
+    showCompleted,
+  })
+
+  // Ошибки хуков — показываем через Toast (презентационный слой)
+  useEffect(() => {
+    if (projectsError) toast.error(projectsError)
+  }, [projectsError, toast])
+  useEffect(() => {
+    if (projectError) toast.error(projectError)
+  }, [projectError, toast])
+  useEffect(() => {
+    if (tasksError) toast.error(tasksError)
+  }, [tasksError, toast])
 
   // Множественный фильтр по исполнителю — на клиенте
   const visibleTasks = useMemo(() => {
@@ -198,10 +220,26 @@ export default function BoardPage() {
 
   // ---- Состояния загрузки/пустоты ----
   if (projectsLoading) {
-    return <p className="text-muted">Загрузка проектов…</p>
+    return (
+      <div className="flex gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="w-80 flex-shrink-0 space-y-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ))}
+      </div>
+    )
   }
   if (projects.length === 0) {
-    return <p className="text-muted">Нет доступных проектов.</p>
+    return (
+      <EmptyState
+        icon={KanbanSquare}
+        title="Нет доступных проектов"
+        description="Проекты, в которых вы состоите, появятся здесь."
+      />
+    )
   }
 
   return (
@@ -227,14 +265,10 @@ export default function BoardPage() {
         )}
 
         {isManager && (
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
-          >
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
             Новая задача
-          </button>
+          </Button>
         )}
 
         {/* Счётчик */}
@@ -318,20 +352,27 @@ export default function BoardPage() {
 
         {/* Сброс */}
         {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="flex items-center gap-1 text-sm text-muted transition hover:text-fg"
-          >
+          <Button variant="ghost" size="sm" onClick={resetFilters}>
             <RotateCcw className="h-3.5 w-3.5" />
             Сбросить
-          </button>
+          </Button>
         )}
       </div>
 
       {/* Тело: колонки статусов с горизонтальным скроллом */}
       {loading && tasks.length === 0 ? (
-        <p className="text-muted">Загрузка задач…</p>
+        <div className="flex flex-1 gap-4 overflow-hidden">
+          {(statuses.length ? statuses : Array.from({ length: 4 })).map(
+            (s, i) => (
+              <div key={s?.id ?? i} className="w-80 flex-shrink-0 space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            )
+          )}
+        </div>
       ) : (
         <DndContext
           sensors={sensors}

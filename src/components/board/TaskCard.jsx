@@ -10,7 +10,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { PRIORITY, DEADLINE_STATE } from '../../lib/constants'
-import { formatDeadline, getInitials, cn } from '../../lib/utils'
+import { formatDeadline, cn } from '../../lib/utils'
+import Avatar from '../ui/Avatar'
 
 // Цвет текста строки со сроком по состоянию дедлайна
 const DEADLINE_TEXT = {
@@ -143,12 +144,7 @@ export default function TaskCard({ task, onOpen, overlay = false }) {
         </div>
 
         {task.assignee_id && (
-          <span
-            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-semibold text-white"
-            title={task.assignee_name ?? ''}
-          >
-            {getInitials(task.assignee_name)}
-          </span>
+          <Avatar name={task.assignee_name} size="xs" title={task.assignee_name ?? ''} />
         )}
       </div>
     </div>

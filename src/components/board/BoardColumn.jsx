@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, X } from 'lucide-react'
 import TaskCard from './TaskCard'
+import Button from '../ui/Button'
 import { cn } from '../../lib/utils'
 
 // Колонка статуса канбан-доски (ширина 320px).
@@ -49,14 +50,15 @@ export default function BoardColumn({
           {tasks.length}
         </span>
         {canManage && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onStartAdd(status.id)}
-            className="ml-auto rounded p-1 text-muted transition hover:bg-line hover:text-fg"
+            className="ml-auto !px-1 !py-1"
             aria-label="Добавить задачу"
           >
             <Plus className="h-4 w-4" />
-          </button>
+          </Button>
         )}
       </div>
 
@@ -90,24 +92,20 @@ export default function BoardColumn({
               className="w-full resize-none rounded bg-transparent text-sm text-fg placeholder-muted outline-none"
             />
             <div className="mt-1.5 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={submit}
-                className="rounded bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent-hover"
-              >
+              <Button size="sm" onClick={submit}>
                 Добавить
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setTitle('')
                   onCancelAdd()
                 }}
-                className="rounded p-1 text-muted transition hover:text-fg"
                 aria-label="Отмена"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </div>
         )}
