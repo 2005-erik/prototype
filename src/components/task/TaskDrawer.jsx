@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import {
-  X,
   Pencil,
   Plus,
   Trash2,
@@ -20,18 +19,19 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTaskDetails } from '../../hooks/useTaskDetails'
-import { PRIORITY, DEADLINE_STATE } from '../../lib/constants'
-import { formatDateTime, formatRelative, getInitials, cn } from '../../lib/utils'
-
-// Формат для input datetime-local из ISO
-function toLocalInput(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`
-}
+import { PRIORITY } from '../../lib/constants'
+import { formatDateTime, formatRelative, cn } from '../../lib/utils'
+import Drawer from '../ui/Drawer'
+import Input from '../ui/Input'
+import Textarea from '../ui/Textarea'
+import Select from '../ui/Select'
+import DatePicker from '../ui/DatePicker'
+import Avatar from '../ui/Avatar'
+import Badge from '../ui/Badge'
+import Button from '../ui/Button'
+import ConfirmDialog from '../ui/ConfirmDialog'
+import { SkeletonText } from '../ui/Skeleton'
+import { useToast } from '../ui/Toast'
 
 function formatBytes(bytes) {
   if (!bytes) return ''
@@ -64,19 +64,11 @@ const ACTIVITY_LABEL = {
 
 export default function TaskDrawer({ task: initial, statuses = [], members = [], onClose }) {
   const { user, isManager } = useAuth()
+  const { toast } = useToast()
   const details = useTaskDetails(initial?.id)
   const t = details.task ?? initial
 
   const fileInputRef = useRef(null)
-
-  // Закрытие по Esc
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   // ---- Локальные состояния редактирования ----
   const [editingTitle, setEditingTitle] = useState(false)
@@ -88,23 +80,34 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
   const [statusComment, setStatusComment] = useState('')
   const [showHistory, setShowHistory] = useState(false)
 
+  // Подтверждение удаления (вложение / пункт чек-листа)
+  const [confirm, setConfirm] = useState(null)
+  const [confirmBusy, setConfirmBusy] = useState(false)
+
   if (!t) return null
 
   const canChangeStatus = isManager || t.assignee_id === user?.id
   const prio = PRIORITY[t.priority]
-  const deadline = DEADLINE_STATE[t.deadline_state]
 
-  // ---- Обработчики ----
+  // Обёртка: выполнить операцию хука и показать toast
+  const notify = async (fn, success) => {
+    const res = await fn()
+    if (res?.error) toast.error(res.error)
+    else if (success) toast.success(success)
+    return res
+  }
+
+  // ---- Обработчики (вызовы details.* не меняются) ----
   const saveTitle = async () => {
     setEditingTitle(false)
     const v = titleValue.trim()
-    if (v && v !== t.title) await details.updateTask({ title: v })
+    if (v && v !== t.title) await notify(() => details.updateTask({ title: v }))
     else setTitleValue(t.title)
   }
 
   const saveDesc = async () => {
     if (desc !== (t.description ?? '')) {
-      await details.updateTask({ description: desc || null })
+      await notify(() => details.updateTask({ description: desc || null }))
     }
   }
 
@@ -115,135 +118,136 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
       setPendingStatusId(statusId)
       setStatusComment('')
     } else {
-      await details.changeStatus(statusId)
+      await notify(() => details.changeStatus(statusId), 'Статус обновлён')
     }
   }
 
   const confirmStatus = async () => {
     const v = statusComment.trim()
     if (!v) return
-    await details.changeStatus(pendingStatusId, v)
-    setPendingStatusId(null)
-    setStatusComment('')
+    const { error } = await notify(
+      () => details.changeStatus(pendingStatusId, v),
+      'Статус обновлён'
+    )
+    if (!error) {
+      setPendingStatusId(null)
+      setStatusComment('')
+    }
   }
 
   const sendComment = async () => {
     const v = commentText.trim()
     if (!v) return
-    const { error } = await details.addComment(v)
+    const { error } = await notify(() => details.addComment(v))
     if (!error) setCommentText('')
   }
 
   const addItem = async () => {
     const v = newItem.trim()
     if (!v) return
-    const { error } = await details.addChecklistItem(v)
+    const { error } = await notify(() => details.addChecklistItem(v))
     if (!error) setNewItem('')
   }
 
   const onPickFile = async (e) => {
     const file = e.target.files?.[0]
-    if (file) await details.uploadAttachment(file)
+    if (file) await notify(() => details.uploadAttachment(file), 'Файл загружен')
     e.target.value = ''
   }
 
   const download = async (att) => {
-    const { url } = await details.getAttachmentUrl(att)
-    if (url) window.open(url, '_blank', 'noopener')
+    const { url, error } = await details.getAttachmentUrl(att)
+    if (error) toast.error(error)
+    else if (url) window.open(url, '_blank', 'noopener')
+  }
+
+  const doConfirmDelete = async () => {
+    if (!confirm) return
+    setConfirmBusy(true)
+    const res =
+      confirm.kind === 'attachment'
+        ? await details.deleteAttachment(confirm.item)
+        : await details.deleteChecklistItem(confirm.item.id)
+    setConfirmBusy(false)
+    if (res?.error) toast.error(res.error)
+    else {
+      toast.success('Удалено')
+      setConfirm(null)
+    }
   }
 
   const checklistDone = details.checklist.filter((i) => i.is_done).length
   const checklistTotal = details.checklist.length
 
+  const assigneeOptions = [
+    { value: '', label: '— не назначен —' },
+    ...members
+      .filter((m) => m.profiles)
+      .map((m) => ({ value: m.profiles.id, label: m.profiles.full_name })),
+  ]
+
+  // Заголовок панели (с inline-редактированием для менеджера)
+  const titleNode = (
+    <div className="min-w-0 flex-1">
+      <span className="text-xs font-normal text-muted">#{t.number}</span>
+      {editingTitle ? (
+        <input
+          autoFocus
+          value={titleValue}
+          onChange={(e) => setTitleValue(e.target.value)}
+          onBlur={saveTitle}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') saveTitle()
+            if (e.key === 'Escape') {
+              setTitleValue(t.title)
+              setEditingTitle(false)
+            }
+          }}
+          className="mt-0.5 w-full rounded border border-line bg-app px-2 py-1 text-lg font-semibold text-fg outline-none focus:border-accent"
+        />
+      ) : (
+        <div className="mt-0.5 flex items-start gap-2">
+          <span className="text-lg font-semibold text-fg">{t.title}</span>
+          {isManager && (
+            <button
+              type="button"
+              onClick={() => {
+                setTitleValue(t.title)
+                setEditingTitle(true)
+              }}
+              className="mt-1 flex-shrink-0 text-muted transition hover:text-fg"
+              aria-label="Редактировать заголовок"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <>
-      {/* Затемнение */}
-      <div
-        className="fixed inset-0 z-30 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Панель 600px */}
-      <aside
-        className="fixed right-0 top-0 z-40 flex h-full w-full max-w-[600px] flex-col border-l border-line bg-surface shadow-xl"
-        role="dialog"
-        aria-label={`Задача #${t.number}`}
-        style={{ borderLeftColor: deadline?.color ?? undefined }}
-      >
-        {/* Шапка */}
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-3">
-          <div className="min-w-0 flex-1">
-            <span className="text-xs text-muted">#{t.number}</span>
-            {editingTitle ? (
-              <input
-                autoFocus
-                value={titleValue}
-                onChange={(e) => setTitleValue(e.target.value)}
-                onBlur={saveTitle}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveTitle()
-                  if (e.key === 'Escape') {
-                    setTitleValue(t.title)
-                    setEditingTitle(false)
-                  }
-                }}
-                className="mt-0.5 w-full rounded border border-line bg-app px-2 py-1 text-lg font-semibold text-fg outline-none focus:border-accent"
-              />
-            ) : (
-              <div className="mt-0.5 flex items-start gap-2">
-                <h2 className="text-lg font-semibold text-fg">{t.title}</h2>
-                {isManager && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTitleValue(t.title)
-                      setEditingTitle(true)
-                    }}
-                    className="mt-1 flex-shrink-0 text-muted transition hover:text-fg"
-                    aria-label="Редактировать заголовок"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted transition hover:bg-line hover:text-fg"
-            aria-label="Закрыть"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 space-y-6 overflow-y-auto p-5">
+      <Drawer open onClose={onClose} width={600} title={titleNode}>
+        <div className="space-y-6">
           {/* Статус */}
           <section>
             <label className="mb-1.5 block text-xs font-medium uppercase text-muted">
               Статус
             </label>
             {canChangeStatus ? (
-              <select
+              <Select
                 value={t.status_id ?? ''}
                 onChange={(e) => onStatusSelect(e.target.value)}
-                className="w-full rounded-lg border border-line bg-app px-3 py-2 text-sm text-fg outline-none focus:border-accent"
-              >
-                {statuses.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+                options={statuses.map((s) => ({ value: s.id, label: s.name }))}
+              />
             ) : (
-              <span
-                className="inline-block rounded px-2 py-1 text-sm text-white"
+              <Badge
+                className="text-sm text-white"
                 style={{ backgroundColor: t.status_color ?? '#3b82f6' }}
               >
                 {t.status_name}
-              </span>
+              </Badge>
             )}
 
             {/* Обязательный комментарий при переходе */}
@@ -252,30 +256,28 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                 <p className="mb-1.5 text-xs text-muted">
                   Для этого статуса требуется комментарий:
                 </p>
-                <textarea
+                <Textarea
                   autoFocus
                   rows={3}
                   value={statusComment}
                   onChange={(e) => setStatusComment(e.target.value)}
-                  className="w-full resize-none rounded border border-line bg-surface p-2 text-sm text-fg outline-none focus:border-accent"
                   placeholder="Причина / пояснение…"
                 />
                 <div className="mt-2 flex justify-end gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setPendingStatusId(null)}
-                    className="rounded px-2.5 py-1 text-xs text-muted transition hover:text-fg"
                   >
                     Отмена
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    size="sm"
                     onClick={confirmStatus}
                     disabled={!statusComment.trim()}
-                    className="rounded bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
                   >
                     Подтвердить
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -283,79 +285,52 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
 
           {/* Метаданные в две колонки */}
           <section className="grid grid-cols-2 gap-4">
-            {/* Исполнитель */}
             <Meta label="Исполнитель">
               {isManager ? (
-                <select
+                <Select
                   value={t.assignee_id ?? ''}
                   onChange={(e) =>
-                    details.updateTask({ assignee_id: e.target.value || null })
+                    notify(() =>
+                      details.updateTask({ assignee_id: e.target.value || null })
+                    )
                   }
-                  className="w-full rounded border border-line bg-app px-2 py-1 text-sm text-fg outline-none focus:border-accent"
-                >
-                  <option value="">— не назначен —</option>
-                  {members.map((m) =>
-                    m.profiles ? (
-                      <option key={m.profiles.id} value={m.profiles.id}>
-                        {m.profiles.full_name}
-                      </option>
-                    ) : null
-                  )}
-                </select>
+                  options={assigneeOptions}
+                />
               ) : (
-                <span className="text-sm text-fg">
-                  {t.assignee_name ?? '—'}
-                </span>
+                <span className="text-sm text-fg">{t.assignee_name ?? '—'}</span>
               )}
             </Meta>
 
-            {/* Автор */}
             <Meta label="Автор">
               <span className="text-sm text-fg">{t.author_name ?? '—'}</span>
             </Meta>
 
-            {/* Приоритет */}
             <Meta label="Приоритет">
               {isManager ? (
-                <select
+                <Select
                   value={t.priority ?? 'medium'}
                   onChange={(e) =>
-                    details.updateTask({ priority: e.target.value })
+                    notify(() => details.updateTask({ priority: e.target.value }))
                   }
-                  className="w-full rounded border border-line bg-app px-2 py-1 text-sm text-fg outline-none focus:border-accent"
-                >
-                  {Object.entries(PRIORITY).map(([key, val]) => (
-                    <option key={key} value={key}>
-                      {val.label}
-                    </option>
-                  ))}
-                </select>
+                  options={Object.entries(PRIORITY).map(([key, val]) => ({
+                    value: key,
+                    label: val.label,
+                  }))}
+                />
               ) : (
-                <span
-                  className={cn(
-                    'inline-block rounded px-2 py-0.5 text-xs font-medium',
-                    prio?.badge
-                  )}
-                >
+                <Badge className={cn('text-xs', prio?.badge)}>
                   {prio?.label ?? '—'}
-                </span>
+                </Badge>
               )}
             </Meta>
 
-            {/* Срок */}
             <Meta label="Срок">
               {isManager ? (
-                <input
-                  type="datetime-local"
-                  value={toLocalInput(t.due_date)}
-                  onChange={(e) =>
-                    details.updateTask({
-                      due_date: e.target.value
-                        ? new Date(e.target.value).toISOString()
-                        : null,
-                    })
+                <DatePicker
+                  value={t.due_date}
+                  onChange={(iso) =>
+                    notify(() => details.updateTask({ due_date: iso }))
                   }
-                  className="w-full rounded border border-line bg-app px-2 py-1 text-sm text-fg outline-none focus:border-accent"
                 />
               ) : (
                 <span className="text-sm text-fg">
@@ -364,7 +339,6 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
               )}
             </Meta>
 
-            {/* Создана / Обновлена */}
             <Meta label="Создана">
               <span className="text-sm text-muted">
                 {formatDateTime(t.created_at)}
@@ -383,13 +357,12 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
               Описание
             </label>
             {isManager ? (
-              <textarea
+              <Textarea
                 rows={4}
                 value={desc}
                 onChange={(e) => setDesc(e.target.value)}
                 onBlur={saveDesc}
                 placeholder="Добавьте описание…"
-                className="w-full resize-y rounded-lg border border-line bg-app p-2.5 text-sm text-fg placeholder-muted outline-none focus:border-accent"
               />
             ) : (
               <p className="whitespace-pre-wrap text-sm text-fg">
@@ -414,9 +387,7 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
               <div className="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-line">
                 <div
                   className="h-full rounded-full bg-accent transition-all"
-                  style={{
-                    width: `${(checklistDone / checklistTotal) * 100}%`,
-                  }}
+                  style={{ width: `${(checklistDone / checklistTotal) * 100}%` }}
                 />
               </div>
             )}
@@ -439,7 +410,14 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                   </span>
                   <button
                     type="button"
-                    onClick={() => details.deleteChecklistItem(item.id)}
+                    onClick={() =>
+                      setConfirm({
+                        kind: 'checklist',
+                        item,
+                        title: 'Удалить пункт?',
+                        message: `«${item.text}» будет удалён.`,
+                      })
+                    }
                     className="text-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
                     aria-label="Удалить пункт"
                   >
@@ -449,21 +427,20 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
               ))}
             </ul>
             <div className="mt-2 flex items-center gap-2">
-              <input
+              <Input
+                className="flex-1"
                 value={newItem}
                 onChange={(e) => setNewItem(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addItem()}
                 placeholder="Новый пункт…"
-                className="flex-1 rounded border border-line bg-app px-2 py-1 text-sm text-fg placeholder-muted outline-none focus:border-accent"
               />
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={addItem}
-                className="rounded p-1.5 text-muted transition hover:bg-line hover:text-fg"
                 aria-label="Добавить пункт"
               >
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </section>
 
@@ -518,7 +495,14 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                     {(att.user_id === user?.id || isManager) && (
                       <button
                         type="button"
-                        onClick={() => details.deleteAttachment(att)}
+                        onClick={() =>
+                          setConfirm({
+                            kind: 'attachment',
+                            item: att,
+                            title: 'Удалить файл?',
+                            message: `«${att.file_name}» будет удалён безвозвратно.`,
+                          })
+                        }
                         className="text-muted transition hover:text-red-400"
                         aria-label="Удалить"
                       >
@@ -536,48 +520,54 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
             <label className="mb-2 block text-xs font-medium uppercase text-muted">
               Комментарии
             </label>
-            <ul className="space-y-3">
-              {details.comments.map((c) => (
-                <li key={c.id} className="flex gap-2.5">
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-white">
-                    {getInitials(c.profiles?.full_name)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-fg">
-                        {c.profiles?.full_name ?? 'Пользователь'}
-                      </span>
-                      <span className="text-xs text-muted">
-                        {formatRelative(c.created_at)}
-                      </span>
+            {details.loading && details.comments.length === 0 ? (
+              <SkeletonText lines={2} />
+            ) : (
+              <ul className="space-y-3">
+                {details.comments.map((c) => (
+                  <li key={c.id} className="flex gap-2.5">
+                    <Avatar
+                      name={c.profiles?.full_name}
+                      size="sm"
+                      className="mt-0.5"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-fg">
+                          {c.profiles?.full_name ?? 'Пользователь'}
+                        </span>
+                        <span className="text-xs text-muted">
+                          {formatRelative(c.created_at)}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm text-fg">
+                        {c.body}
+                      </p>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm text-fg">
-                      {c.body}
-                    </p>
-                  </div>
-                </li>
-              ))}
-              {details.comments.length === 0 && (
-                <li className="text-sm text-muted/60">Пока нет комментариев</li>
-              )}
-            </ul>
+                  </li>
+                ))}
+                {details.comments.length === 0 && (
+                  <li className="text-sm text-muted/60">
+                    Пока нет комментариев
+                  </li>
+                )}
+              </ul>
+            )}
             <div className="mt-3 flex items-center gap-2">
-              <input
+              <Input
+                className="flex-1"
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendComment()}
                 placeholder="Написать комментарий…"
-                className="flex-1 rounded-lg border border-line bg-app px-3 py-2 text-sm text-fg placeholder-muted outline-none focus:border-accent"
               />
-              <button
-                type="button"
+              <Button
                 onClick={sendComment}
                 disabled={!commentText.trim()}
-                className="rounded-lg bg-accent p-2 text-white transition hover:bg-accent-hover disabled:opacity-50"
                 aria-label="Отправить"
               >
                 <Send className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </section>
 
@@ -639,7 +629,19 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
             )}
           </section>
         </div>
-      </aside>
+      </Drawer>
+
+      {/* Подтверждение удаления */}
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title}
+        message={confirm?.message}
+        confirmText="Удалить"
+        danger
+        loading={confirmBusy}
+        onConfirm={doConfirmDelete}
+        onCancel={() => !confirmBusy && setConfirm(null)}
+      />
     </>
   )
 }

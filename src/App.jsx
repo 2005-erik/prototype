@@ -3,6 +3,8 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RoleHomePage from './pages/RoleHomePage'
+import ProjectsPage from './pages/ProjectsPage'
+import ProjectSettingsPage from './pages/ProjectSettingsPage'
 import BoardPage from './pages/BoardPage'
 import TaskPage from './pages/TaskPage'
 import MyTasksPage from './pages/MyTasksPage'
@@ -26,6 +28,14 @@ function App() {
           <Route element={<AppLayout />}>
             {/* Главная — зависит от роли */}
             <Route path="/" element={<RoleHomePage />} />
+
+            {/* Проекты — доступны всем ролям (создание ограничено в UI) */}
+            <Route path="/projects" element={<ProjectsPage />} />
+            {/* Настройки проекта — доступ проверяется внутри (owner/manager) */}
+            <Route
+              path="/projects/:id/settings"
+              element={<ProjectSettingsPage />}
+            />
 
             {/* Доска задач — только руководители */}
             <Route

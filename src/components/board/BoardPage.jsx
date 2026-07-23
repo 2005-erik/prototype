@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -10,12 +10,19 @@ import {
 } from '@dnd-kit/core'
 import { Plus, Search, RotateCcw, KanbanSquare } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { useProjects, useProject, useWorkload } from '../../hooks/useProjects'
+import { useProjectNav } from '../../contexts/ProjectNavContext'
+import {
+  useProjects,
+  useProject,
+  useWorkload,
+  useProjectsOverview,
+} from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
 import { PRIORITY } from '../../lib/constants'
 import { getInitials, cn } from '../../lib/utils'
 import BoardColumn from './BoardColumn'
 import TaskCard from './TaskCard'
+import ProjectSelector from './ProjectSelector'
 import StatusCommentModal from './StatusCommentModal'
 import TaskDrawer from '../task/TaskDrawer'
 import CreateTaskModal from '../task/CreateTaskModal'
@@ -43,20 +50,49 @@ export default function BoardPage() {
   const { isManager } = useAuth()
   const { toast } = useToast()
 
+  const { lastProjectId, setLastProjectId } = useProjectNav()
+
   const { projects, loading: projectsLoading, error: projectsError } =
     useProjects()
-  const activeProjectId = paramId ?? projects[0]?.id ?? null
+  const activeProjectId = paramId ?? lastProjectId ?? projects[0]?.id ?? null
+
+  // Метрики по всем проектам — для счётчиков в селекторе
+  const projectIds = useMemo(() => projects.map((p) => p.id), [projects])
+  const { metrics: projectsMetrics } = useProjectsOverview(projectIds)
+
+  // Запоминаем последний открытый проект (в контексте, не в localStorage)
+  useEffect(() => {
+    if (paramId) setLastProjectId(paramId)
+  }, [paramId, setLastProjectId])
+
+  // Заход на /board без id — редирект на последний/первый проект
+  useEffect(() => {
+    if (!paramId && activeProjectId) {
+      navigate(`/board/${activeProjectId}`, { replace: true })
+    }
+  }, [paramId, activeProjectId, navigate])
 
   const { project, statuses, members, error: projectError } =
     useProject(activeProjectId)
   const { workload } = useWorkload(activeProjectId)
 
   // ---- Фильтры ----
+  const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [priority, setPriority] = useState(null)
   const [assignees, setAssignees] = useState(() => new Set())
   const [showCompleted, setShowCompleted] = useState(false)
+  // Спецфильтр из URL (переход с дашборда): overdue | today | stale
+  const [special, setSpecial] = useState(null)
+
+  // Инициализация фильтров из query-параметров (?assignee=&filter=)
+  useEffect(() => {
+    const a = searchParams.get('assignee')
+    if (a) setAssignees(new Set(a.split(',').filter(Boolean)))
+    const f = searchParams.get('filter')
+    setSpecial(['overdue', 'today', 'stale'].includes(f) ? f : null)
+  }, [searchParams])
 
   // debounce поиска 300мс
   useEffect(() => {
@@ -88,11 +124,27 @@ export default function BoardPage() {
     if (tasksError) toast.error(tasksError)
   }, [tasksError, toast])
 
-  // Множественный фильтр по исполнителю — на клиенте
+  // Клиентские фильтры: исполнитель (множественный) + спецфильтр из URL
   const visibleTasks = useMemo(() => {
-    if (assignees.size === 0) return tasks
-    return tasks.filter((t) => assignees.has(t.assignee_id))
-  }, [tasks, assignees])
+    let list = tasks
+    if (assignees.size > 0) {
+      list = list.filter((t) => assignees.has(t.assignee_id))
+    }
+    if (special === 'overdue') {
+      list = list.filter((t) => t.deadline_state === 'overdue')
+    } else if (special === 'today') {
+      const today = new Date().toDateString()
+      list = list.filter(
+        (t) =>
+          !t.completed_at &&
+          t.due_date &&
+          new Date(t.due_date).toDateString() === today
+      )
+    } else if (special === 'stale') {
+      list = list.filter((t) => t.is_stale)
+    }
+    return list
+  }, [tasks, assignees, special])
 
   // Группировка по статусу
   const tasksByStatus = useMemo(() => {
@@ -199,6 +251,13 @@ export default function BoardPage() {
     setPriority(null)
     setAssignees(new Set())
     setShowCompleted(false)
+    setSpecial(null)
+  }
+
+  const SPECIAL_LABEL = {
+    overdue: 'Просрочено',
+    today: 'Срок сегодня',
+    stale: 'Застряли',
   }
 
   const toggleAssignee = (id) => {
@@ -216,7 +275,11 @@ export default function BoardPage() {
   )
 
   const hasActiveFilters =
-    !!debouncedSearch || !!priority || assignees.size > 0 || showCompleted
+    !!debouncedSearch ||
+    !!priority ||
+    assignees.size > 0 ||
+    showCompleted ||
+    !!special
 
   // ---- Состояния загрузки/пустоты ----
   if (projectsLoading) {
@@ -247,17 +310,12 @@ export default function BoardPage() {
       {/* Шапка доски */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         {projects.length > 1 ? (
-          <select
-            value={activeProjectId ?? ''}
-            onChange={(e) => navigate(`/board/${e.target.value}`)}
-            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-fg outline-none focus:border-accent"
-          >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+          <ProjectSelector
+            projects={projects}
+            activeProjectId={activeProjectId}
+            metrics={projectsMetrics}
+            isManager={isManager}
+          />
         ) : (
           <h2 className="text-base font-medium text-fg">
             {project?.name ?? ''}
@@ -349,6 +407,18 @@ export default function BoardPage() {
           />
           Показывать выполненные
         </label>
+
+        {/* Чип спецфильтра из URL */}
+        {special && (
+          <button
+            type="button"
+            onClick={() => setSpecial(null)}
+            className="flex items-center gap-1 rounded-lg bg-accent/15 px-2 py-1 text-xs font-medium text-accent transition hover:bg-accent/25"
+          >
+            {SPECIAL_LABEL[special]}
+            <span aria-hidden="true">✕</span>
+          </button>
+        )}
 
         {/* Сброс */}
         {hasActiveFilters && (

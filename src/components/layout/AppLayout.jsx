@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Kanban,
+  FolderKanban,
   Users,
   BarChart3,
   Sun,
@@ -12,10 +13,13 @@ import {
   Bell,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useAuth } from '../../contexts/AuthContext'
+import { useProjects } from '../../hooks/useProjects'
 import { supabase } from '../../lib/supabase'
 import { getInitials } from '../../lib/utils'
 
@@ -200,6 +204,12 @@ export default function AppLayout() {
   const { profile, user, isAdmin, isEmployee, signOut } = useAuth()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
+  const [projectsOpen, setProjectsOpen] = useState(false)
+
+  // Проекты для вложенного списка под «Доской задач» (только не для employee)
+  const { projects } = useProjects()
+  const activeBoardProjectId =
+    location.pathname.match(/^\/board\/([^/]+)/)?.[1] ?? null
 
   // Навигация в зависимости от роли
   const nav = isEmployee
@@ -209,6 +219,7 @@ export default function AppLayout() {
       ]
     : [
         { to: '/', label: 'Дашборд', icon: LayoutDashboard, end: true },
+        { to: '/projects', label: 'Проекты', icon: FolderKanban },
         { to: '/board', label: 'Доска задач', icon: Kanban },
         { to: '/team', label: 'Сотрудники', icon: Users },
         { to: '/analytics', label: 'Аналитика', icon: BarChart3 },
@@ -222,6 +233,7 @@ export default function AppLayout() {
   const homeTitle = isEmployee ? 'Мой день' : 'Дашборд'
   const titleMap = {
     '/': homeTitle,
+    '/projects': 'Проекты',
     '/board': 'Доска задач',
     '/team': 'Сотрудники',
     '/analytics': 'Аналитика',
@@ -271,19 +283,86 @@ export default function AppLayout() {
         </div>
 
         {/* Навигация */}
-        <nav className="flex-1 space-y-1 px-2 py-2">
-          {nav.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={linkClass}
-              title={collapsed ? label : undefined}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </NavLink>
-          ))}
+        <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-2">
+          {nav.map(({ to, label, icon: Icon, end }) => {
+            // Пункт «Доска задач» со сворачиваемым списком проектов
+            if (to === '/board') {
+              return (
+                <div key={to}>
+                  <div className="flex items-center gap-1">
+                    <NavLink
+                      to={to}
+                      end={end}
+                      className={(s) => `${linkClass(s)} flex-1`}
+                      title={collapsed ? label : undefined}
+                    >
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      {!collapsed && <span className="truncate">{label}</span>}
+                    </NavLink>
+                    {!collapsed && (
+                      <button
+                        type="button"
+                        onClick={() => setProjectsOpen((v) => !v)}
+                        className="rounded-lg p-1.5 text-muted transition hover:bg-line hover:text-fg"
+                        aria-label={projectsOpen ? 'Свернуть проекты' : 'Развернуть проекты'}
+                      >
+                        {projectsOpen ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {!collapsed && projectsOpen && (
+                    <div className="ml-3 mt-1 space-y-0.5 border-l border-line pl-2">
+                      {projects.length === 0 ? (
+                        <p className="px-2 py-1 text-xs text-muted/60">
+                          Нет проектов
+                        </p>
+                      ) : (
+                        projects.map((p) => {
+                          const active = activeBoardProjectId === p.id
+                          return (
+                            <NavLink
+                              key={p.id}
+                              to={`/board/${p.id}`}
+                              className={[
+                                'flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition',
+                                active
+                                  ? 'bg-line text-fg'
+                                  : 'text-muted hover:bg-line hover:text-fg',
+                              ].join(' ')}
+                            >
+                              <span
+                                className="h-2 w-2 flex-shrink-0 rounded-full"
+                                style={{ backgroundColor: p.color ?? '#2563eb' }}
+                              />
+                              <span className="truncate">{p.name}</span>
+                            </NavLink>
+                          )
+                        })
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={linkClass}
+                title={collapsed ? label : undefined}
+              >
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {!collapsed && <span className="truncate">{label}</span>}
+              </NavLink>
+            )
+          })}
         </nav>
 
         {/* Низ: профиль + выход */}

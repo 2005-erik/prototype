@@ -5,6 +5,53 @@ import { useAuth } from '../contexts/AuthContext'
 const BUCKET = 'task-attachments'
 
 // ---------------------------------------------------------------------
+// useEnrichedTask — одна задача из tasks_enriched (для страницы /task/:id).
+// ---------------------------------------------------------------------
+export function useEnrichedTask(taskId) {
+  const [task, setTask] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    if (!taskId) {
+      setLoading(false)
+      return () => {
+        mountedRef.current = false
+      }
+    }
+    setLoading(true)
+    const run = async () => {
+      try {
+        const { data, error: err } = await supabase
+          .from('tasks_enriched')
+          .select('*')
+          .eq('id', taskId)
+          .single()
+        if (err) throw err
+        if (mountedRef.current) {
+          setTask(data)
+          setError(null)
+        }
+      } catch (err) {
+        if (mountedRef.current) {
+          setError(err.message ?? 'Не удалось загрузить задачу')
+        }
+      } finally {
+        if (mountedRef.current) setLoading(false)
+      }
+    }
+    run()
+    return () => {
+      mountedRef.current = false
+    }
+  }, [taskId])
+
+  return { task, loading, error }
+}
+
+// ---------------------------------------------------------------------
 // useTaskDetails — полные данные одной задачи для TaskDrawer:
 // задача (enriched), комментарии, чек-лист, вложения, история.
 // Realtime: перезагрузка при изменениях связанных таблиц.

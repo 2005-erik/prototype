@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 // useProjects — список проектов текущего пользователя
 // (RLS уже ограничивает выборку проектами, где он участник)
 // ---------------------------------------------------------------------
-export function useProjects() {
+export function useProjects({ includeArchived = false } = {}) {
   const { user } = useAuth()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,11 +15,14 @@ export function useProjects() {
 
   const fetchProjects = useCallback(async () => {
     try {
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('projects')
         .select('*')
-        .eq('is_archived', false)
         .order('created_at', { ascending: false })
+
+      if (!includeArchived) query = query.eq('is_archived', false)
+
+      const { data, error: err } = await query
 
       if (err) throw err
       if (mountedRef.current) {
@@ -33,7 +36,7 @@ export function useProjects() {
     } finally {
       if (mountedRef.current) setLoading(false)
     }
-  }, [])
+  }, [includeArchived])
 
   useEffect(() => {
     mountedRef.current = true
@@ -113,6 +116,61 @@ export function useProjects() {
     [fetchProjects]
   )
 
+  // Удаление проекта (каскад в БД снимает задачи/статусы/участников)
+  const deleteProject = useCallback(
+    async (id) => {
+      try {
+        const { error: err } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id)
+
+        if (err) throw err
+        await fetchProjects()
+        return { error: null }
+      } catch (err) {
+        const message = err.message ?? 'Не удалось удалить проект'
+        if (mountedRef.current) setError(message)
+        return { error: message }
+      }
+    },
+    [fetchProjects]
+  )
+
+  // Заменить автосозданные статусы своими (для кастомного набора при создании).
+  // statuses — массив { name, color }; порядок = position; первый — стартовый,
+  // последний — финальный.
+  const replaceStatuses = useCallback(async (projectId, statuses) => {
+    try {
+      const clean = statuses
+        .map((s) => ({ name: s.name?.trim(), color: s.color }))
+        .filter((s) => s.name)
+      if (clean.length === 0) return { error: null }
+
+      const del = await supabase
+        .from('statuses')
+        .delete()
+        .eq('project_id', projectId)
+      if (del.error) throw del.error
+
+      const rows = clean.map((s, i) => ({
+        project_id: projectId,
+        name: s.name,
+        code: `custom_${i + 1}`,
+        color: s.color ?? null,
+        position: i + 1,
+        is_initial: i === 0,
+        is_final: i === clean.length - 1,
+      }))
+      const ins = await supabase.from('statuses').insert(rows)
+      if (ins.error) throw ins.error
+
+      return { error: null }
+    } catch (err) {
+      return { error: err.message ?? 'Не удалось задать статусы' }
+    }
+  }, [])
+
   return {
     projects,
     loading,
@@ -120,6 +178,8 @@ export function useProjects() {
     createProject,
     updateProject,
     archiveProject,
+    deleteProject,
+    replaceStatuses,
     refetch: fetchProjects,
   }
 }
@@ -241,4 +301,179 @@ export function useWorkload(projectId) {
   }, [fetchWorkload])
 
   return { workload, loading, refetch: fetchWorkload }
+}
+
+// ---------------------------------------------------------------------
+// useProjectsOverview — метрики задач (одним запросом) + участники
+// для набора проектов. Возвращает maps по project_id.
+// ---------------------------------------------------------------------
+export function useProjectsOverview(projectIds) {
+  const [metrics, setMetrics] = useState({})
+  const [members, setMembers] = useState({})
+  const [loading, setLoading] = useState(true)
+  const mountedRef = useRef(true)
+
+  // стабильный ключ для зависимостей
+  const idsKey = (projectIds ?? []).slice().sort().join(',')
+
+  const fetchOverview = useCallback(async () => {
+    const ids = idsKey ? idsKey.split(',') : []
+    if (ids.length === 0) {
+      if (mountedRef.current) {
+        setMetrics({})
+        setMembers({})
+        setLoading(false)
+      }
+      return
+    }
+
+    try {
+      // Метрики — один запрос по всем проектам
+      const [tasksRes, membersRes] = await Promise.all([
+        supabase
+          .from('tasks_enriched')
+          .select('project_id, completed_at, deadline_state')
+          .in('project_id', ids),
+        supabase
+          .from('project_members')
+          .select('project_id, role, profiles(id, full_name, avatar_url)')
+          .in('project_id', ids),
+      ])
+
+      if (tasksRes.error) throw tasksRes.error
+      if (membersRes.error) throw membersRes.error
+
+      const m = {}
+      for (const id of ids) m[id] = { total: 0, overdue: 0, completed: 0 }
+      for (const row of tasksRes.data ?? []) {
+        const bucket = m[row.project_id]
+        if (!bucket) continue
+        bucket.total += 1
+        if (row.completed_at) bucket.completed += 1
+        if (row.deadline_state === 'overdue') bucket.overdue += 1
+      }
+
+      const mem = {}
+      for (const id of ids) mem[id] = []
+      for (const row of membersRes.data ?? []) {
+        if (!mem[row.project_id]) mem[row.project_id] = []
+        mem[row.project_id].push(row)
+      }
+
+      if (mountedRef.current) {
+        setMetrics(m)
+        setMembers(mem)
+      }
+    } catch {
+      if (mountedRef.current) {
+        setMetrics({})
+        setMembers({})
+      }
+    } finally {
+      if (mountedRef.current) setLoading(false)
+    }
+  }, [idsKey])
+
+  useEffect(() => {
+    mountedRef.current = true
+    setLoading(true)
+    fetchOverview()
+    return () => {
+      mountedRef.current = false
+    }
+  }, [fetchOverview])
+
+  return { metrics, members, loading, refetch: fetchOverview }
+}
+
+// ---------------------------------------------------------------------
+// useProjectStatusesMap — статусы для набора проектов одним запросом.
+// Возвращает map: project_id → массив статусов (по position).
+// ---------------------------------------------------------------------
+export function useProjectStatusesMap(projectIds) {
+  const [statusesByProject, setStatusesByProject] = useState({})
+  const mountedRef = useRef(true)
+  const idsKey = (projectIds ?? []).slice().sort().join(',')
+
+  useEffect(() => {
+    mountedRef.current = true
+    const ids = idsKey ? idsKey.split(',') : []
+    if (ids.length === 0) {
+      setStatusesByProject({})
+      return () => {
+        mountedRef.current = false
+      }
+    }
+
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('statuses')
+          .select('*')
+          .in('project_id', ids)
+          .order('position', { ascending: true })
+        if (error) throw error
+        const map = {}
+        for (const s of data ?? []) {
+          if (!map[s.project_id]) map[s.project_id] = []
+          map[s.project_id].push(s)
+        }
+        if (mountedRef.current) setStatusesByProject(map)
+      } catch {
+        if (mountedRef.current) setStatusesByProject({})
+      }
+    }
+    run()
+
+    return () => {
+      mountedRef.current = false
+    }
+  }, [idsKey])
+
+  return statusesByProject
+}
+
+// ---------------------------------------------------------------------
+// useManagedProjectMembers — участники проекта, но только если текущий
+// пользователь может ими управлять (admin, либо owner/manager проекта).
+// Иначе возвращает пустой массив (смена исполнителя недоступна).
+// ---------------------------------------------------------------------
+export function useManagedProjectMembers(projectId) {
+  const { user, isAdmin } = useAuth()
+  const [members, setMembers] = useState([])
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    if (!projectId) {
+      setMembers([])
+      return () => {
+        mountedRef.current = false
+      }
+    }
+
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('project_members')
+          .select('*, profiles(*)')
+          .eq('project_id', projectId)
+        if (error) throw error
+        const rows = data ?? []
+        const myRole = rows.find((m) => m.user_id === user?.id)?.role
+        const canManage =
+          isAdmin || myRole === 'owner' || myRole === 'manager'
+        if (mountedRef.current) setMembers(canManage ? rows : [])
+      } catch {
+        if (mountedRef.current) setMembers([])
+      }
+    }
+    run()
+
+    return () => {
+      mountedRef.current = false
+    }
+  }, [projectId, user, isAdmin])
+
+  return members
 }
