@@ -1,8 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { sanitizeFileName } from '../lib/utils'
 
 const BUCKET = 'task-attachments'
+
+// Ограничения загрузки (должны совпадать с настройками бакета)
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 МБ
+const ALLOWED_MIME = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'image/png',
+  'image/jpeg',
+  'text/plain',
+  'text/csv',
+  'application/zip',
+  'application/x-zip-compressed',
+])
 
 // ---------------------------------------------------------------------
 // useEnrichedTask — одна задача из tasks_enriched (для страницы /task/:id).
@@ -291,9 +307,22 @@ export function useTaskDetails(taskId) {
   const uploadAttachment = useCallback(
     async (file) => {
       if (!file || !task) return { error: 'Нет файла' }
+
+      // Клиентская валидация размера и типа (сервер дублирует через бакет)
+      if (file.size > MAX_FILE_SIZE) {
+        const message = 'Файл больше 10 МБ'
+        if (mountedRef.current) setError(message)
+        return { error: message }
+      }
+      if (!file.type || !ALLOWED_MIME.has(file.type)) {
+        const message = 'Недопустимый тип файла'
+        if (mountedRef.current) setError(message)
+        return { error: message }
+      }
+
       try {
-        // Путь строго {project_id}/{task_id}/{uuid_имя} — под RLS storage
-        const safeName = file.name.replace(/[^\w.\-а-яА-ЯёЁ]+/g, '_')
+        // Путь строго {project_id}/{task_id}/{uuid_безопасноеИмя} — под RLS storage
+        const safeName = sanitizeFileName(file.name)
         const path = `${task.project_id}/${taskId}/${crypto.randomUUID()}_${safeName}`
 
         const up = await supabase.storage.from(BUCKET).upload(path, file)

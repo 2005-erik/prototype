@@ -13,10 +13,11 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useMyDay, useMyTasks, useReworkReasons } from '../hooks/useMyDay'
-import { PRIORITY, DEADLINE_STATE } from '../lib/constants'
-import { formatDate, formatDeadline, cn } from '../lib/utils'
+import { useProjects, useProjectStatusesMap } from '../hooks/useProjects'
+import { formatDate, cn } from '../lib/utils'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
+import TaskRow from '../components/task/TaskRow'
 
 // Приветствие по времени суток
 function greeting() {
@@ -25,53 +26,6 @@ function greeting() {
   if (h < 12) return 'Доброе утро'
   if (h < 18) return 'Добрый день'
   return 'Добрый вечер'
-}
-
-// Компактная карточка задачи
-function TaskRow({ task, reason }) {
-  const navigate = useNavigate()
-  const prio = PRIORITY[task.priority]
-  const deadline = DEADLINE_STATE[task.deadline_state]
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(`/task/${task.id}`)}
-      className="flex w-full items-start gap-3 rounded-lg border border-line bg-app p-3 text-left transition hover:border-accent"
-    >
-      {prio && (
-        <span
-          className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-          style={{ backgroundColor: prio.color }}
-          title={prio.label}
-        />
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-fg">
-          <span className="text-muted">#{task.number}</span> {task.title}
-        </p>
-        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-          {task.status_name && (
-            <span
-              className="rounded px-1.5 py-0.5 text-white"
-              style={{ backgroundColor: task.status_color ?? '#3b82f6' }}
-            >
-              {task.status_name}
-            </span>
-          )}
-          {task.due_date && (
-            <span style={{ color: deadline?.color }}>
-              {formatDeadline(task.due_date)}
-            </span>
-          )}
-        </div>
-        {reason && (
-          <p className="mt-1.5 rounded bg-red-500/10 px-2 py-1 text-xs text-red-300">
-            <span className="font-medium">Причина возврата:</span> {reason}
-          </p>
-        )}
-      </div>
-    </button>
-  )
 }
 
 // Секция группы задач
@@ -115,11 +69,19 @@ function Section({ icon: Icon, title, titleClass, count, danger, children, colla
 }
 
 export default function MyDayPage() {
+  const navigate = useNavigate()
   const { profile } = useAuth()
   const { data, loading: dayLoading } = useMyDay()
   const { tasks: allMine, loading: tasksLoading } = useMyTasks({
     showCompleted: false,
   })
+  const { projects } = useProjects({ includeArchived: true })
+
+  const projectById = useMemo(() => {
+    const map = {}
+    for (const p of projects) map[p.id] = p
+    return map
+  }, [projects])
 
   const groups = useMemo(() => {
     const rework = data?.rework ?? []
@@ -158,6 +120,27 @@ export default function MyDayPage() {
     [groups.gRework]
   )
   const reasons = useReworkReasons(reworkIds)
+
+  // Статусы задействованных проектов — для кнопок смены статуса в TaskRow
+  const involvedIds = useMemo(() => {
+    const ids = new Set()
+    for (const key of Object.keys(groups)) {
+      for (const t of groups[key]) ids.add(t.project_id)
+    }
+    return [...ids]
+  }, [groups])
+  const statusesByProject = useProjectStatusesMap(involvedIds)
+
+  const renderTask = (t, reason) => (
+    <TaskRow
+      key={t.id}
+      task={t}
+      statuses={statusesByProject[t.project_id] ?? []}
+      project={projectById[t.project_id]}
+      reason={reason}
+      onOpen={(task) => navigate(`/task/${task.id}`)}
+    />
+  )
 
   const firstName = (profile?.full_name ?? '').trim().split(/\s+/)[0] || ''
 
@@ -225,9 +208,7 @@ export default function MyDayPage() {
               count={groups.gRework.length}
               danger
             >
-              {groups.gRework.map((t) => (
-                <TaskRow key={t.id} task={t} reason={reasons[t.id]} />
-              ))}
+              {groups.gRework.map((t) => renderTask(t, reasons[t.id]))}
             </Section>
           )}
 
@@ -239,9 +220,7 @@ export default function MyDayPage() {
               titleClass="text-red-400"
               count={groups.gOverdue.length}
             >
-              {groups.gOverdue.map((t) => (
-                <TaskRow key={t.id} task={t} />
-              ))}
+              {groups.gOverdue.map((t) => renderTask(t))}
             </Section>
           )}
 
@@ -253,9 +232,7 @@ export default function MyDayPage() {
               titleClass="text-orange-400"
               count={groups.gToday.length}
             >
-              {groups.gToday.map((t) => (
-                <TaskRow key={t.id} task={t} />
-              ))}
+              {groups.gToday.map((t) => renderTask(t))}
             </Section>
           )}
 
@@ -266,9 +243,7 @@ export default function MyDayPage() {
               title="В работе"
               count={groups.gInProgress.length}
             >
-              {groups.gInProgress.map((t) => (
-                <TaskRow key={t.id} task={t} />
-              ))}
+              {groups.gInProgress.map((t) => renderTask(t))}
             </Section>
           )}
 
@@ -280,9 +255,7 @@ export default function MyDayPage() {
               titleClass="text-muted"
               count={groups.gSoon.length}
             >
-              {groups.gSoon.map((t) => (
-                <TaskRow key={t.id} task={t} />
-              ))}
+              {groups.gSoon.map((t) => renderTask(t))}
             </Section>
           )}
 
@@ -296,9 +269,7 @@ export default function MyDayPage() {
               collapsible
               defaultCollapsed
             >
-              {groups.gNoDeadline.map((t) => (
-                <TaskRow key={t.id} task={t} />
-              ))}
+              {groups.gNoDeadline.map((t) => renderTask(t))}
             </Section>
           )}
         </div>

@@ -12,6 +12,24 @@ export function cn(...classes) {
   return classes.filter(Boolean).join(' ')
 }
 
+// Экранирование пользовательского ввода для PostgREST .or(ilike):
+// запятая/скобки/бэкслеш ломают синтаксис фильтра — заменяем на пробел.
+export function sanitizeSearchTerm(value) {
+  return (value ?? '').replace(/[,()\\]/g, ' ').trim()
+}
+
+// Безопасное имя файла: убрать путь, оставить безопасные символы,
+// схлопнуть подчёркивания. Расширение сохраняется.
+export function sanitizeFileName(name) {
+  const base = String(name ?? 'file').split(/[\\/]/).pop() || 'file'
+  return base
+    .replace(/[^\w.\-а-яА-ЯёЁ ]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_{2,}/g, '_')
+    .replace(/^[._]+/, '')
+    .slice(0, 120) || 'file'
+}
+
 // Приводим вход к Date, отсекаем некорректные значения
 function toDate(value) {
   if (!value) return null
@@ -39,6 +57,20 @@ export function formatRelative(date) {
   if (!d) return ''
   if (isYesterday(d)) return 'вчера'
   return formatDistanceToNow(d, { addSuffix: true, locale: ru })
+}
+
+// «2 дн 4 ч» из числа дней (например 2.17 → «2 дн 4 ч»)
+export function formatDaysDuration(days) {
+  if (days == null || Number.isNaN(Number(days))) return '—'
+  const total = Number(days)
+  if (total <= 0) return '0 ч'
+  const d = Math.floor(total)
+  const h = Math.round((total - d) * 24)
+  const parts = []
+  if (d > 0) parts.push(`${d} дн`)
+  if (h > 0) parts.push(`${h} ч`)
+  if (parts.length === 0) return '< 1 ч'
+  return parts.join(' ')
 }
 
 // «ТА» из «Турар Абухан» (первые буквы первых двух слов)

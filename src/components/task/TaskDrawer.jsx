@@ -86,7 +86,17 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
 
   if (!t) return null
 
-  const canChangeStatus = isManager || t.assignee_id === user?.id
+  // ---- Права ----
+  const isAssignee = t.assignee_id === user?.id
+  const notOwner = !isManager && !isAssignee // сотрудник и не исполнитель
+  const canChangeStatus = isManager || isAssignee
+  const canToggleChecklist = isManager || isAssignee // отмечать пункты
+  const canEditChecklist = isManager // добавлять/удалять пункты
+  const canComment = isManager || isAssignee
+  const canUpload = isManager || isAssignee
+  const canDeleteAttachment = (att) =>
+    isManager || (isAssignee && att.user_id === user?.id)
+
   const prio = PRIORITY[t.priority]
 
   // Обёртка: выполнить операцию хука и показать toast
@@ -230,6 +240,13 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
     <>
       <Drawer open onClose={onClose} width={600} title={titleNode}>
         <div className="space-y-6">
+          {/* Плашка: задача не назначена этому сотруднику */}
+          {notOwner && (
+            <div className="rounded-lg bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
+              Вы не являетесь исполнителем этой задачи
+            </div>
+          )}
+
           {/* Статус */}
           <section>
             <label className="mb-1.5 block text-xs font-medium uppercase text-muted">
@@ -397,8 +414,9 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                   <input
                     type="checkbox"
                     checked={item.is_done}
+                    disabled={!canToggleChecklist}
                     onChange={() => details.toggleChecklistItem(item)}
-                    className="accent-blue-600"
+                    className="accent-blue-600 disabled:opacity-50"
                   />
                   <span
                     className={cn(
@@ -408,40 +426,44 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                   >
                     {item.text}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setConfirm({
-                        kind: 'checklist',
-                        item,
-                        title: 'Удалить пункт?',
-                        message: `«${item.text}» будет удалён.`,
-                      })
-                    }
-                    className="text-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
-                    aria-label="Удалить пункт"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {canEditChecklist && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setConfirm({
+                          kind: 'checklist',
+                          item,
+                          title: 'Удалить пункт?',
+                          message: `«${item.text}» будет удалён.`,
+                        })
+                      }
+                      className="text-muted opacity-0 transition hover:text-red-400 group-hover:opacity-100"
+                      aria-label="Удалить пункт"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
-            <div className="mt-2 flex items-center gap-2">
-              <Input
-                className="flex-1"
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addItem()}
-                placeholder="Новый пункт…"
-              />
-              <Button
-                variant="ghost"
-                onClick={addItem}
-                aria-label="Добавить пункт"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+            {canEditChecklist && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  className="flex-1"
+                  value={newItem}
+                  onChange={(e) => setNewItem(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addItem()}
+                  placeholder="Новый пункт…"
+                />
+                <Button
+                  variant="ghost"
+                  onClick={addItem}
+                  aria-label="Добавить пункт"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* Вложения */}
@@ -450,20 +472,24 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
               <label className="text-xs font-medium uppercase text-muted">
                 Вложения
               </label>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1 text-xs text-accent transition hover:underline"
-              >
-                <Upload className="h-3.5 w-3.5" />
-                Загрузить
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={onPickFile}
-                className="hidden"
-              />
+              {canUpload && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1 text-xs text-accent transition hover:underline"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Загрузить
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={onPickFile}
+                    className="hidden"
+                  />
+                </>
+              )}
             </div>
             {details.attachments.length === 0 ? (
               <p className="text-sm text-muted/60">Нет вложений</p>
@@ -492,7 +518,7 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                     >
                       <Download className="h-4 w-4" />
                     </button>
-                    {(att.user_id === user?.id || isManager) && (
+                    {canDeleteAttachment(att) && (
                       <button
                         type="button"
                         onClick={() =>
@@ -553,22 +579,24 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                 )}
               </ul>
             )}
-            <div className="mt-3 flex items-center gap-2">
-              <Input
-                className="flex-1"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendComment()}
-                placeholder="Написать комментарий…"
-              />
-              <Button
-                onClick={sendComment}
-                disabled={!commentText.trim()}
-                aria-label="Отправить"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            {canComment && (
+              <div className="mt-3 flex items-center gap-2">
+                <Input
+                  className="flex-1"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendComment()}
+                  placeholder="Написать комментарий…"
+                />
+                <Button
+                  onClick={sendComment}
+                  disabled={!commentText.trim()}
+                  aria-label="Отправить"
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </section>
 
           {/* История изменений */}

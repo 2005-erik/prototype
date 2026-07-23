@@ -1,13 +1,15 @@
 import { ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
-// Одна карточка метрики. delta — число в процентах (может быть null).
+// Одна карточка метрики. delta — изменение в процентах (может быть null).
+// higherIsBetter — рост метрики это «хорошо» (зелёный) или «плохо» (красный).
 export default function MetricCard({
   icon: Icon,
   label,
   value,
   accent = 'default',
   delta = null,
+  higherIsBetter = true,
   onClick,
 }) {
   const accentClass = {
@@ -16,6 +18,9 @@ export default function MetricCard({
     orange: value > 0 ? 'text-orange-400' : 'text-muted',
     amber: value > 0 ? 'text-amber-400' : 'text-muted',
   }[accent]
+
+  // Хорошо, если направление дельты совпадает со «смыслом» роста
+  const isGood = delta != null && (delta > 0 ? higherIsBetter : !higherIsBetter)
 
   return (
     <button
@@ -29,7 +34,7 @@ export default function MetricCard({
           <span
             className={cn(
               'flex items-center gap-0.5 text-xs font-medium',
-              delta > 0 ? 'text-green-400' : 'text-red-400'
+              isGood ? 'text-green-400' : 'text-red-400'
             )}
           >
             {delta > 0 ? (

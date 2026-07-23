@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { sanitizeSearchTerm } from '../lib/utils'
 
 // ---------------------------------------------------------------------
 // useMyDay — экран «Мой день» через RPC get_my_day(auth.uid()).
@@ -117,9 +118,8 @@ export function useMyTasks(filters = {}) {
       if (deadlineState) query = query.eq('deadline_state', deadlineState)
       if (!showCompleted) query = query.is('completed_at', null)
 
-      const q = search?.trim()
-      if (q) {
-        const safe = q.replace(/[,()]/g, ' ')
+      const safe = sanitizeSearchTerm(search)
+      if (safe) {
         query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`)
       }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Kanban,
@@ -15,18 +15,38 @@ import {
   PanelLeftOpen,
   ChevronRight,
   ChevronDown,
+  ArrowRightLeft,
+  UserPlus,
+  CalendarClock,
+  MessageSquare,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProjects } from '../../hooks/useProjects'
 import { supabase } from '../../lib/supabase'
-import { getInitials } from '../../lib/utils'
+import { getInitials, cn } from '../../lib/utils'
+import { useToast } from '../ui/Toast'
+import PersonalWorkload from './PersonalWorkload'
+
+// Иконка уведомления по типу
+const NOTIF_ICON = {
+  status_changed: ArrowRightLeft,
+  assigned: UserPlus,
+  due_changed: CalendarClock,
+  comment: MessageSquare,
+  due_soon: Clock,
+  overdue: AlertTriangle,
+}
 
 // ---------------------------------------------------------------------
 // Колокольчик уведомлений с бейджем и выпадающим списком
 // ---------------------------------------------------------------------
 function NotificationsBell({ userId }) {
+  const navigate = useNavigate()
+  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState([])
   const [unread, setUnread] = useState(0)
@@ -122,9 +142,17 @@ function NotificationsBell({ userId }) {
       if (error) throw error
       setItems((prev) => prev.map((n) => ({ ...n, is_read: true })))
       setUnread(0)
-    } catch {
-      // игнорируем
+      toast.success('Все уведомления прочитаны')
+    } catch (err) {
+      toast.error(err.message ?? 'Не удалось отметить прочитанными')
     }
+  }
+
+  // Клик по уведомлению: пометить прочитанным + открыть задачу
+  const onItemClick = async (n) => {
+    if (!n.is_read) await markRead(n.id)
+    setOpen(false)
+    if (n.task_id) navigate(`/task/${n.task_id}`)
   }
 
   return (
@@ -144,7 +172,7 @@ function NotificationsBell({ userId }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-lg border border-line bg-surface shadow-lg">
+        <div className="absolute right-0 z-20 mt-2 w-[400px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-line bg-surface shadow-lg">
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
             <span className="text-sm font-medium text-fg">Уведомления</span>
             {unread > 0 && (
@@ -161,34 +189,42 @@ function NotificationsBell({ userId }) {
           <div className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-muted">
-                Уведомлений нет
+                Нет уведомлений
               </p>
             ) : (
-              items.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => !n.is_read && markRead(n.id)}
-                  className={`flex w-full flex-col items-start gap-0.5 border-b border-line px-4 py-2.5 text-left transition last:border-0 hover:bg-line/50 ${
-                    n.is_read ? 'opacity-60' : ''
-                  }`}
-                >
-                  <span className="flex w-full items-start gap-2">
-                    {!n.is_read && (
-                      <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-accent" />
+              items.map((n) => {
+                const Icon = NOTIF_ICON[n.type] ?? Bell
+                return (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => onItemClick(n)}
+                    className={cn(
+                      'flex w-full items-start gap-2.5 border-b border-line px-4 py-2.5 text-left transition last:border-0 hover:bg-line/50',
+                      !n.is_read && 'bg-accent/5'
                     )}
-                    <span className="text-sm text-fg">{n.message}</span>
-                  </span>
-                  <span className="pl-4 text-xs text-muted">
-                    {n.created_at
-                      ? formatDistanceToNow(new Date(n.created_at), {
-                          addSuffix: true,
-                          locale: ru,
-                        })
-                      : ''}
-                  </span>
-                </button>
-              ))
+                  >
+                    {/* Синяя точка непрочитанного */}
+                    <span className="mt-1.5 w-2 flex-shrink-0">
+                      {!n.is_read && (
+                        <span className="block h-2 w-2 rounded-full bg-accent" />
+                      )}
+                    </span>
+                    <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm text-fg">{n.message}</span>
+                      <span className="mt-0.5 block text-xs text-muted">
+                        {n.created_at
+                          ? formatDistanceToNow(new Date(n.created_at), {
+                              addSuffix: true,
+                              locale: ru,
+                            })
+                          : ''}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
@@ -396,6 +432,9 @@ export default function AppLayout() {
               </div>
             )}
           </div>
+
+          {/* Личная загрузка */}
+          {!collapsed && <PersonalWorkload />}
 
           <button
             type="button"

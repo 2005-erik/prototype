@@ -25,7 +25,7 @@ const QUICK_ACTION = {
 }
 
 // Строка задачи для списочных экранов (крупная, для тапа с телефона).
-export default function TaskRow({ task, statuses = [], project = null, onOpen }) {
+export default function TaskRow({ task, statuses = [], project = null, reason, onOpen }) {
   const changeStatus = useChangeStatus()
   const { toast } = useToast()
   const [optimistic, setOptimistic] = useState(null)
@@ -176,14 +176,21 @@ export default function TaskRow({ task, statuses = [], project = null, onOpen })
               )}
             </div>
           )}
+
+          {/* Причина возврата (для секции доработки) */}
+          {reason && (
+            <p className="mt-1.5 rounded bg-red-500/10 px-2 py-1 text-xs text-red-300">
+              <span className="font-medium">Причина возврата:</span> {reason}
+            </p>
+          )}
         </div>
 
-        {/* Действия справа */}
+        {/* Действия справа (тап-таргеты ≥44px) */}
         <div className="flex flex-shrink-0 items-center gap-1.5" onClick={stop}>
           {action && targetStatus ? (
             <Button
               size="sm"
-              className={action.cls}
+              className={cn('min-h-[44px]', action.cls)}
               onClick={() => performChange(targetStatus)}
             >
               {action.label}
@@ -197,7 +204,7 @@ export default function TaskRow({ task, statuses = [], project = null, onOpen })
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
-              className="rounded-lg p-1.5 text-muted transition hover:bg-line hover:text-fg"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-muted transition hover:bg-line hover:text-fg"
               aria-label="Сменить статус"
             >
               <MoreVertical className="h-4 w-4" />

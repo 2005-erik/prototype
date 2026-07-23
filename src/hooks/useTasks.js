@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { sanitizeSearchTerm } from '../lib/utils'
 
 // ---------------------------------------------------------------------
 // useTasks — задачи проекта из представления tasks_enriched
@@ -36,10 +37,8 @@ export function useTasks(projectId, filters = {}) {
       if (deadlineState) query = query.eq('deadline_state', deadlineState)
       if (!showCompleted) query = query.is('completed_at', null)
 
-      const q = search?.trim()
-      if (q) {
-        // Экранируем запятые/скобки, чтобы не сломать синтаксис or()
-        const safe = q.replace(/[,()]/g, ' ')
+      const safe = sanitizeSearchTerm(search)
+      if (safe) {
         query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`)
       }
 
