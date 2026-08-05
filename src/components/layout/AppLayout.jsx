@@ -22,6 +22,7 @@ import {
   Clock,
   AlertTriangle,
   ScrollText,
+  Import,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -264,6 +265,7 @@ export default function AppLayout() {
 
   if (isAdmin) {
     nav.push({ to: '/admin/users', label: 'Пользователи', icon: Settings })
+    nav.push({ to: '/admin/import-trello', label: 'Импорт из Trello', icon: Import })
     nav.push({ to: '/admin/auth-log', label: 'Журнал входов', icon: ScrollText })
   }
 
@@ -278,6 +280,7 @@ export default function AppLayout() {
     '/my-tasks': 'Мои задачи',
     '/profile': 'Профиль',
     '/admin/users': 'Пользователи',
+    '/admin/import-trello': 'Импорт из Trello',
     '/admin/auth-log': 'Журнал входов',
   }
   const pageTitle =

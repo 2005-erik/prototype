@@ -13,6 +13,7 @@ import MyTasksPage from './pages/MyTasksPage'
 import TeamPage from './pages/TeamPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import UsersAdminPage from './pages/UsersAdminPage'
+import TrelloImportPage from './pages/TrelloImportPage'
 import AuthLogPage from './pages/AuthLogPage'
 import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -100,6 +101,16 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <UsersAdminPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Импорт из Trello — только admin */}
+            <Route
+              path="/admin/import-trello"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <TrelloImportPage />
                 </ProtectedRoute>
               }
             />
