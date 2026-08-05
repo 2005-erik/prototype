@@ -55,7 +55,18 @@ export function useUserAdmin() {
 
   // ---- Операции ----
 
-  // Приглашение (Edge Function)
+  // Создание учётки с паролем (Edge Function). Пароль передаётся
+  // администратором сотруднику вручную — письмо не отправляется.
+  const createUser = useCallback(
+    async (payload) => {
+      const res = await invokeFn('create-user', payload)
+      if (!res.error) await fetchUsers()
+      return res
+    },
+    [fetchUsers]
+  )
+
+  // Приглашение по email (Edge Function) — альтернативный путь
   const inviteUser = useCallback(
     async (payload) => {
       const res = await invokeFn('invite-user', payload)
@@ -190,6 +201,7 @@ export function useUserAdmin() {
     loading,
     error,
     refetch: fetchUsers,
+    createUser,
     inviteUser,
     deactivateUser,
     resetPassword,

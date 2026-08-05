@@ -4,6 +4,7 @@ import AppLayout from './components/layout/AppLayout'
 import LoginPage from './pages/LoginPage'
 import RoleHomePage from './pages/RoleHomePage'
 import SetPasswordPage from './pages/SetPasswordPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectSettingsPage from './pages/ProjectSettingsPage'
 import BoardPage from './pages/BoardPage'
@@ -28,8 +29,11 @@ function App() {
 
         {/* Защищённая зона: сессия обязательна, общий каркас с сайдбаром */}
         <Route element={<ProtectedRoute />}>
-          {/* Установка пароля — без сайдбара (по ссылке из письма / принудительно) */}
+          {/* Установка пароля — без сайдбара (по ссылке из письма-приглашения) */}
           <Route path="/set-password" element={<SetPasswordPage />} />
+
+          {/* Обязательная смена пароля при первом входе (must_change_password) */}
+          <Route path="/change-password" element={<ChangePasswordPage />} />
 
           <Route element={<AppLayout />}>
             {/* Главная — зависит от роли */}

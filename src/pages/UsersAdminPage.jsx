@@ -21,7 +21,7 @@ import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
-import InviteUserModal from '../components/admin/InviteUserModal'
+import CreateUserModal from '../components/admin/CreateUserModal'
 import EditUserModal from '../components/admin/EditUserModal'
 import ManageProjectsModal from '../components/admin/ManageProjectsModal'
 import DeactivateUserDialog from '../components/admin/DeactivateUserDialog'
@@ -100,7 +100,7 @@ export default function UsersAdminPage() {
     users,
     loading,
     error,
-    inviteUser,
+    createUser,
     deactivateUser,
     resetPassword,
     activateUser,
@@ -295,7 +295,7 @@ export default function UsersAdminPage() {
         />
         <Button size="sm" className="ml-auto" onClick={() => setInviteOpen(true)}>
           <Plus className="h-4 w-4" />
-          Пригласить сотрудника
+          Добавить сотрудника
         </Button>
       </div>
 
@@ -390,9 +390,9 @@ export default function UsersAdminPage() {
 
       {/* Модалки */}
       {inviteOpen && (
-        <InviteUserModal
+        <CreateUserModal
           projects={projects}
-          onInvite={inviteUser}
+          onCreate={createUser}
           onClose={() => setInviteOpen(false)}
         />
       )}

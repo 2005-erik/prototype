@@ -31,12 +31,12 @@ export default function ProtectedRoute({ allowedRoles, children }) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Обязательная смена пароля — уводим на /set-password с любого маршрута
+  // Обязательная смена пароля — уводим на /change-password с любого маршрута
   if (
     profile?.must_change_password &&
-    location.pathname !== '/set-password'
+    location.pathname !== '/change-password'
   ) {
-    return <Navigate to="/set-password" replace />
+    return <Navigate to="/change-password" replace />
   }
 
   // Проверка роли, если маршрут её ограничивает
