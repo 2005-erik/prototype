@@ -23,7 +23,7 @@ export default function Avatar({ name, src, size = 'md', className, title }) {
     <span
       title={title ?? name}
       className={cn(
-        'flex flex-shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-white',
+        'flex flex-shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-on-accent',
         cls,
         className
       )}

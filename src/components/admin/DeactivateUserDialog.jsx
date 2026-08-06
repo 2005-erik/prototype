@@ -62,7 +62,7 @@ export default function DeactivateUserDialog({
                 name="fate"
                 checked={mode === 'unassign'}
                 onChange={() => setMode('unassign')}
-                className="accent-blue-600"
+                className="accent-[#ecc371]"
               />
               Оставить без исполнителя
             </label>
@@ -72,7 +72,7 @@ export default function DeactivateUserDialog({
                 name="fate"
                 checked={mode === 'reassign'}
                 onChange={() => setMode('reassign')}
-                className="accent-blue-600"
+                className="accent-[#ecc371]"
               />
               Переназначить на:
             </label>

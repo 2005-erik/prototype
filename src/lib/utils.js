@@ -73,6 +73,16 @@ export function formatDaysDuration(days) {
   return parts.join(' ')
 }
 
+// Русское склонение по числу: plural(3, 'задача', 'задачи', 'задач') → «задачи»
+export function plural(n, one, few, many) {
+  const abs = Math.abs(Number(n) || 0)
+  const mod10 = abs % 10
+  const mod100 = abs % 100
+  if (mod10 === 1 && mod100 !== 11) return one
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few
+  return many
+}
+
 // «ТА» из «Турар Абухан» (первые буквы первых двух слов)
 export function getInitials(fullName) {
   if (!fullName) return '?'

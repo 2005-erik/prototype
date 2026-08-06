@@ -1,8 +1,8 @@
 import { cn } from '../../lib/utils'
-import Spinner from './Spinner'
+import { AzimutSpinner } from './AzimutLoader'
 
 const VARIANTS = {
-  primary: 'bg-accent text-white hover:bg-accent-hover',
+  primary: 'bg-accent text-on-accent hover:bg-accent-hover',
   secondary: 'border border-line bg-surface text-fg hover:border-accent',
   ghost: 'text-muted hover:bg-line hover:text-fg',
   danger: 'bg-red-600 text-white hover:bg-red-500',
@@ -35,7 +35,7 @@ export default function Button({
       )}
       {...rest}
     >
-      {loading && <Spinner size={size === 'lg' ? 20 : 16} />}
+      {loading && <AzimutSpinner size={18} />}
       {children}
     </button>
   )

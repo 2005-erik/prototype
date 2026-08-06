@@ -6,7 +6,7 @@ import { formatDeadline, cn } from '../../lib/utils'
 
 const BAR_COLOR = {
   free: 'bg-slate-500',
-  normal: 'bg-blue-500',
+  normal: 'bg-[#2bbaac]',
   busy: 'bg-orange-500',
   overloaded: 'bg-red-500',
 }

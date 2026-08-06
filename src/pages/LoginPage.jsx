@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useLocation } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, LoaderCircle } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { AzimutSpinner } from '../components/ui/AzimutLoader'
 
 // Приводим технические тексты Supabase к понятным русским сообщениям
 function humanizeError(message) {
@@ -80,13 +81,23 @@ export default function LoginPage() {
     'w-full rounded-lg border border-line bg-app py-2.5 pl-10 pr-3 text-fg placeholder-muted outline-none transition focus:border-accent focus:ring-1 focus:ring-accent'
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-app px-4 py-10">
+      {/* Знак и название — над формой */}
+      <div className="mb-8 flex flex-col items-center text-center">
+        <img
+          src="/azimut-mark.svg"
+          alt="Azimut"
+          width={72}
+          height={72}
+          className="h-[72px] w-[72px]"
+        />
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-fg">
+          Азимут
+        </h1>
+        <p className="mt-1.5 text-sm text-muted">Система управления задачами</p>
+      </div>
+
       <div className="w-full max-w-sm rounded-lg border border-line bg-surface p-8 shadow-xl">
-        {/* Заголовок */}
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold text-fg">Планировщик задач</h1>
-          <p className="mt-1 text-sm text-muted">Вход в систему</p>
-        </div>
 
         {/* Email */}
         <label className="mb-4 block">
@@ -155,13 +166,9 @@ export default function LoginPage() {
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          className="mt-4 flex w-full items-center justify-center rounded-lg bg-accent py-2.5 font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-4 flex w-full items-center justify-center rounded-lg bg-accent py-2.5 font-medium text-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? (
-            <LoaderCircle className="h-5 w-5 animate-spin" aria-label="Вход…" />
-          ) : (
-            'Войти'
-          )}
+          {submitting ? <AzimutSpinner size={18} /> : 'Войти'}
         </button>
       </div>
     </div>

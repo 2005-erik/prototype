@@ -10,7 +10,7 @@ import { TOOLTIP_STYLE } from './chartTheme'
 
 const COLORS = {
   '0': '#64748b',
-  '1': '#3b82f6',
+  '1': '#ecc371',
   '2': '#f59e0b',
   '3plus': '#ef4444',
 }

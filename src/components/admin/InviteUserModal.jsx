@@ -121,7 +121,7 @@ function SingleTab({ projects, onInvite, onClose }) {
                   name="role"
                   checked={role === r}
                   onChange={() => setRole(r)}
-                  className="mt-0.5 accent-blue-600"
+                  className="mt-0.5 accent-[#ecc371]"
                 />
                 <span>
                   <span className="block text-sm font-medium text-fg">
@@ -154,9 +154,9 @@ function SingleTab({ projects, onInvite, onClose }) {
                     type="checkbox"
                     checked={projectIds.has(p.id)}
                     onChange={() => toggleProject(p.id)}
-                    className="accent-blue-600"
+                    className="accent-[#ecc371]"
                   />
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color ?? '#2563eb' }} />
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color ?? '#ecc371' }} />
                   {p.name}
                 </label>
               ))}

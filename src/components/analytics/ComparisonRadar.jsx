@@ -11,7 +11,7 @@ import {
 } from 'recharts'
 import { GRID, AXIS_TICK, TOOLTIP_STYLE } from './chartTheme'
 
-const RADAR_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7']
+const RADAR_COLORS = ['#ecc371', '#2bbaac', '#22c55e', '#f59e0b']
 
 // Оси: доступ к значению + «выше = лучше»
 const AXES = [

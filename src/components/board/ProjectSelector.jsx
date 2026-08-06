@@ -39,7 +39,7 @@ export default function ProjectSelector({
       >
         <span
           className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-          style={{ backgroundColor: active?.color ?? '#2563eb' }}
+          style={{ backgroundColor: active?.color ?? '#ecc371' }}
         />
         <span className="max-w-48 truncate font-medium">
           {active?.name ?? 'Проект'}
@@ -68,7 +68,7 @@ export default function ProjectSelector({
                 >
                   <span
                     className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                    style={{ backgroundColor: p.color ?? '#2563eb' }}
+                    style={{ backgroundColor: p.color ?? '#ecc371' }}
                   />
                   <span className="min-w-0 flex-1 truncate">{p.name}</span>
                   {count !== null && (

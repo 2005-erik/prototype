@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Азимут">
+  <rect width="32" height="32" rx="7" fill="#022622"/>
+  <g transform="rotate(45 16 16)">
+    <path d="M16 4 L20.5 16 L16 19 L11.5 16 Z" fill="#ECC371"/>
+    <path d="M16 28 L11.5 16 L16 19 L20.5 16 Z" fill="#2BBAAC"/>
+  </g>
+  <circle cx="16" cy="16" r="1.8" fill="#022622"/>
+</svg>

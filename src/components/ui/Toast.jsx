@@ -15,7 +15,7 @@ const ToastContext = createContext(null)
 const TYPES = {
   success: { icon: CheckCircle2, ring: 'ring-green-500/40', color: 'text-green-400' },
   error: { icon: AlertCircle, ring: 'ring-red-500/40', color: 'text-red-400' },
-  info: { icon: Info, ring: 'ring-blue-500/40', color: 'text-blue-400' },
+  info: { icon: Info, ring: 'ring-[#2bbaac]/40', color: 'text-[#2bbaac]' },
 }
 
 function ToastViewport({ toasts, onClose }) {

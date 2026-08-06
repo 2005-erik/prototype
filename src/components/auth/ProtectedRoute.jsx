@@ -1,15 +1,12 @@
 import { Navigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { AzimutSpinner } from '../ui/AzimutLoader'
 
-// Полноэкранный спиннер на время проверки сессии
+// Полноэкранный индикатор на время проверки сессии
 function FullScreenSpinner() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-app">
-      <div
-        className="h-8 w-8 animate-spin rounded-full border-4 border-line border-t-accent"
-        role="status"
-        aria-label="Загрузка"
-      />
+      <AzimutSpinner size={32} />
     </div>
   )
 }

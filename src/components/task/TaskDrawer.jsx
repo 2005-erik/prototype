@@ -263,7 +263,7 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
             ) : (
               <Badge
                 className="text-sm text-white"
-                style={{ backgroundColor: t.status_color ?? '#3b82f6' }}
+                style={{ backgroundColor: t.status_color ?? '#ecc371' }}
               >
                 {t.status_name}
               </Badge>
@@ -418,7 +418,7 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                     checked={item.is_done}
                     disabled={!canToggleChecklist}
                     onChange={() => details.toggleChecklistItem(item)}
-                    className="accent-blue-600 disabled:opacity-50"
+                    className="accent-[#ecc371] disabled:opacity-50"
                   />
                   <span
                     className={cn(

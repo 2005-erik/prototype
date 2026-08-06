@@ -41,7 +41,7 @@ export default function ProjectCard({
       {/* Цветная полоса */}
       <div
         className="h-1.5 w-full"
-        style={{ backgroundColor: project.color ?? '#2563eb' }}
+        style={{ backgroundColor: project.color ?? '#ecc371' }}
       />
 
       <div className="flex flex-1 flex-col p-4">

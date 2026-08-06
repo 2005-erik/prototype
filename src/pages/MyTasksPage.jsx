@@ -11,7 +11,6 @@ import { cn } from '../lib/utils'
 import Select from '../components/ui/Select'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
-import { ListChecks } from 'lucide-react'
 import TaskRow from '../components/task/TaskRow'
 import TaskDrawer from '../components/task/TaskDrawer'
 
@@ -254,7 +253,7 @@ export default function MyTasksPage() {
             type="checkbox"
             checked={showCompleted}
             onChange={(e) => setShowCompleted(e.target.checked)}
-            className="accent-blue-600"
+            className="accent-[#ecc371]"
           />
           Показывать выполненные
         </label>
@@ -277,7 +276,7 @@ export default function MyTasksPage() {
               className={cn(
                 'rounded px-2.5 py-1 text-xs font-medium transition',
                 groupBy === g.value
-                  ? 'bg-accent text-white'
+                  ? 'bg-accent text-on-accent'
                   : 'text-muted hover:text-fg'
               )}
             >
@@ -296,7 +295,6 @@ export default function MyTasksPage() {
         </div>
       ) : sorted.length === 0 ? (
         <EmptyState
-          icon={ListChecks}
           title="Задач не найдено"
           description="Измените фильтры или загляните позже."
         />

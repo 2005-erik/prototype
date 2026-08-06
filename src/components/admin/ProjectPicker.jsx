@@ -66,11 +66,11 @@ export default function ProjectPicker({
                 type="checkbox"
                 checked={selected.has(p.id)}
                 onChange={() => onToggle(p.id)}
-                className="accent-blue-600"
+                className="accent-[#ecc371]"
               />
               <span
                 className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: p.color ?? '#2563eb' }}
+                style={{ backgroundColor: p.color ?? '#ecc371' }}
               />
               {p.name}
             </label>

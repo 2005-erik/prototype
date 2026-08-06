@@ -86,12 +86,16 @@ export default function BoardPage() {
   // Спецфильтр из URL (переход с дашборда): overdue | today | stale
   const [special, setSpecial] = useState(null)
 
-  // Инициализация фильтров из query-параметров (?assignee=&filter=)
+  // Инициализация фильтров из query-параметров (?assignee=&filter=&completed=)
   useEffect(() => {
     const a = searchParams.get('assignee')
     if (a) setAssignees(new Set(a.split(',').filter(Boolean)))
     const f = searchParams.get('filter')
     setSpecial(['overdue', 'today', 'stale'].includes(f) ? f : null)
+    // ?completed=1 — переход из отчёта импорта: иначе задачи, пришедшие
+    // в завершающем статусе, не видны и кажется, что импорт не сработал.
+    // Только включаем: снятый вручную флажок обратно не навязываем.
+    if (searchParams.get('completed') === '1') setShowCompleted(true)
   }, [searchParams])
 
   // debounce поиска 300мс
@@ -403,7 +407,7 @@ export default function BoardPage() {
             type="checkbox"
             checked={showCompleted}
             onChange={(e) => setShowCompleted(e.target.checked)}
-            className="accent-blue-600"
+            className="accent-[#ecc371]"
           />
           Показывать выполненные
         </label>
@@ -428,6 +432,19 @@ export default function BoardPage() {
           </Button>
         )}
       </div>
+
+      {/* Проект без задач — подсказываем, с чего начать
+          (колонки оставляем: они нужны как цели перетаскивания) */}
+      {!loading && tasks.length === 0 && !hasActiveFilters && (
+        <EmptyState
+          title="Задач пока нет"
+          description={
+            isManager
+              ? 'Создайте первую или импортируйте из Trello.'
+              : 'Задачи появятся здесь, когда руководитель их назначит.'
+          }
+        />
+      )}
 
       {/* Тело: колонки статусов с горизонтальным скроллом */}
       {loading && tasks.length === 0 ? (

@@ -164,7 +164,7 @@ export default function ManagerDashboard() {
                 className={cn(
                   'rounded px-2.5 py-1 text-xs font-medium transition',
                   period === d
-                    ? 'bg-accent text-white'
+                    ? 'bg-accent text-on-accent'
                     : 'text-muted hover:text-fg'
                 )}
               >

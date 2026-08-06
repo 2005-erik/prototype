@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import EmptyState from '../ui/EmptyState'
-import { ListChecks } from 'lucide-react'
 import { formatDaysDuration, formatDeadline } from '../../lib/utils'
 
 function daysInWork(t) {
@@ -13,7 +12,7 @@ function StatusBadge({ task }) {
   return (
     <span
       className="rounded px-1.5 py-0.5 text-[11px] text-white"
-      style={{ backgroundColor: task.status_color ?? '#3b82f6' }}
+      style={{ backgroundColor: task.status_color ?? '#ecc371' }}
     >
       {task.status_name}
     </span>
@@ -78,7 +77,12 @@ export default function TasksTab({ tasks = [], onOpen }) {
   )
 
   if (tasks.length === 0) {
-    return <EmptyState icon={ListChecks} title="В проекте нет задач" />
+    return (
+      <EmptyState
+        title="Задач пока нет"
+        description="Создайте первую или импортируйте из Trello."
+      />
+    )
   }
 
   return (

@@ -13,6 +13,7 @@ import { useAnalyticsExport } from '../hooks/useAnalyticsExport'
 import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
+import { AzimutSpinner } from '../components/ui/AzimutLoader'
 import { useToast } from '../components/ui/Toast'
 import { cn } from '../lib/utils'
 import OverviewTab from '../components/analytics/OverviewTab'
@@ -98,7 +99,11 @@ export default function AnalyticsPage() {
   }
 
   if (projectsLoading) {
-    return <p className="text-muted">Загрузка…</p>
+    return (
+      <div className="flex justify-center py-16">
+        <AzimutSpinner size={32} />
+      </div>
+    )
   }
   if (projects.length === 0) {
     return (
@@ -170,9 +175,8 @@ export default function AnalyticsPage() {
       {/* Содержимое */}
       {noTasks ? (
         <EmptyState
-          icon={BarChart3}
-          title="В проекте нет задач"
-          description="Аналитика появится, когда появятся задачи."
+          title="Задач пока нет"
+          description="Создайте первую или импортируйте из Trello — аналитика появится следом."
         />
       ) : !enoughData && tab !== 'tasks' ? (
         <EmptyState

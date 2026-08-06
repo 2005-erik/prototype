@@ -9,7 +9,7 @@ import { useToast } from '../ui/Toast'
 
 // Палитра из 8 предустановленных цветов
 const COLORS = [
-  '#2563eb',
+  '#ecc371',
   '#7c3aed',
   '#db2777',
   '#dc2626',
@@ -22,7 +22,7 @@ const COLORS = [
 // Стандартный набор для стартового заполнения редактора статусов
 const DEFAULT_STATUSES = [
   { name: 'Новая', color: '#94a3b8' },
-  { name: 'В работе', color: '#3b82f6' },
+  { name: 'В работе', color: '#ecc371' },
   { name: 'На проверке', color: '#f59e0b' },
   { name: 'На доработке', color: '#ef4444' },
   { name: 'Выполнено', color: '#22c55e' },
@@ -135,7 +135,7 @@ export default function CreateProjectModal({ onCreate, onClose }) {
               type="checkbox"
               checked={useDefaultStatuses}
               onChange={(e) => setUseDefaultStatuses(e.target.checked)}
-              className="accent-blue-600"
+              className="accent-[#ecc371]"
             />
             Использовать стандартный набор статусов
           </label>

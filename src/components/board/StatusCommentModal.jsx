@@ -73,7 +73,7 @@ export default function StatusCommentModal({ pending, onConfirm, onCancel }) {
             type="button"
             onClick={submit}
             disabled={!comment.trim() || busy}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? 'Сохранение…' : 'Подтвердить'}
           </button>

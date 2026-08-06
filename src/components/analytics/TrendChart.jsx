@@ -34,7 +34,7 @@ export default function TrendChart({ data = [] }) {
           labelFormatter={(d) => formatDate(d)}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="created" name="Создано" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="created" name="Создано" fill="#ecc371" radius={[2, 2, 0, 0]} />
         <Bar dataKey="completed" name="Завершено" fill="#22c55e" radius={[2, 2, 0, 0]} />
         <Line
           dataKey="open_total"

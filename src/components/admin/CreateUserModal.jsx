@@ -298,7 +298,7 @@ function SingleTab({
               type="checkbox"
               checked={oneForAll}
               onChange={(e) => setOneForAll(e.target.checked)}
-              className="accent-blue-600"
+              className="accent-[#ecc371]"
             />
             Использовать один пароль для всех создаваемых
           </label>
@@ -328,7 +328,7 @@ function SingleTab({
                   name="role"
                   checked={role === r}
                   onChange={() => setRole(r)}
-                  className="mt-0.5 accent-blue-600"
+                  className="mt-0.5 accent-[#ecc371]"
                 />
                 <span>
                   <span className="block text-sm font-medium text-fg">

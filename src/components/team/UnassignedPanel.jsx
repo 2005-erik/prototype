@@ -21,7 +21,7 @@ function AssignMenu({ members, onAssign }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-accent-hover"
+        className="rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-on-accent transition hover:bg-accent-hover"
       >
         Назначить
       </button>

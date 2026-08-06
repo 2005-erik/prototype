@@ -8,7 +8,7 @@ import { useToast } from '../../ui/Toast'
 import { cn } from '../../../lib/utils'
 
 const COLORS = [
-  '#2563eb',
+  '#ecc371',
   '#7c3aed',
   '#db2777',
   '#dc2626',

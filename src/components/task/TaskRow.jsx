@@ -113,7 +113,7 @@ export default function TaskRow({ task, statuses = [], project = null, reason, o
               <span className="flex items-center gap-1 text-muted">
                 <span
                   className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: project.color ?? '#2563eb' }}
+                  style={{ backgroundColor: project.color ?? '#ecc371' }}
                 />
                 {project.name}
               </span>

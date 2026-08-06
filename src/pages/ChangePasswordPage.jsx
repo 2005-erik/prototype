@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, Eye, EyeOff, Check, X, LoaderCircle } from 'lucide-react'
+import { Lock, Eye, EyeOff, Check, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { AzimutSpinner } from '../components/ui/AzimutLoader'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/ui/Toast'
 import { cn } from '../lib/utils'
@@ -27,7 +28,7 @@ const STRENGTH = [
   { label: '', cls: '' },
   { label: 'Слабый', cls: 'bg-red-500' },
   { label: 'Средний', cls: 'bg-amber-500' },
-  { label: 'Хороший', cls: 'bg-blue-500' },
+  { label: 'Хороший', cls: 'bg-[#2bbaac]' },
   { label: 'Надёжный', cls: 'bg-green-500' },
 ]
 
@@ -181,9 +182,9 @@ export default function ChangePasswordPage() {
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="flex w-full items-center justify-center rounded-lg bg-accent py-2.5 font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full items-center justify-center rounded-lg bg-accent py-2.5 font-medium text-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {busy ? <LoaderCircle className="h-5 w-5 animate-spin" /> : 'Сохранить пароль'}
+          {busy ? <AzimutSpinner size={18} /> : 'Сохранить пароль'}
         </button>
       </div>
     </div>

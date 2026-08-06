@@ -16,7 +16,7 @@ export default function BottleneckChart({ rows = [], slowestId }) {
   const data = rows.map((r) => ({
     name: r.status_name,
     days: r.avg_days ?? 0,
-    color: r.status_color ?? '#3b82f6',
+    color: r.status_color ?? '#ecc371',
     isSlowest: r.status_id === slowestId,
   }))
 

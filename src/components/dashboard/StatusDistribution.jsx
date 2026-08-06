@@ -8,20 +8,24 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import EmptyState from '../ui/EmptyState'
-import { BarChart3 } from 'lucide-react'
 
 // data: [{ status_id, status_name, status_color, count }]
 // onSelect(statusId) — клик по столбцу
 export default function StatusDistribution({ data = [], onSelect }) {
   if (!data.length || data.every((d) => (d.count ?? 0) === 0)) {
-    return <EmptyState icon={BarChart3} title="Нет задач" />
+    return (
+      <EmptyState
+        title="Задач пока нет"
+        description="Создайте первую или импортируйте из Trello."
+      />
+    )
   }
 
   const rows = data.map((d) => ({
     id: d.status_id,
     name: d.status_name,
     count: d.count ?? 0,
-    color: d.status_color ?? '#3b82f6',
+    color: d.status_color ?? '#ecc371',
   }))
 
   return (

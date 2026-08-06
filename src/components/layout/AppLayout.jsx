@@ -12,7 +12,6 @@ import {
   LogOut,
   Bell,
   PanelLeftClose,
-  PanelLeftOpen,
   ChevronRight,
   ChevronDown,
   ArrowRightLeft,
@@ -206,7 +205,7 @@ function NotificationsBell({ userId }) {
                       !n.is_read && 'bg-accent/5'
                     )}
                   >
-                    {/* Синяя точка непрочитанного */}
+                    {/* Точка непрочитанного */}
                     <span className="mt-1.5 w-2 flex-shrink-0">
                       {!n.is_read && (
                         <span className="block h-2 w-2 rounded-full bg-accent" />
@@ -286,14 +285,14 @@ export default function AppLayout() {
   const pageTitle =
     titleMap[location.pathname] ??
     nav.find((n) => !n.end && location.pathname.startsWith(n.to))?.label ??
-    'Планировщик задач'
+    'Азимут'
 
   const linkClass = ({ isActive }) =>
     [
       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
       collapsed ? 'justify-center' : '',
       isActive
-        ? 'bg-accent text-white'
+        ? 'bg-accent text-on-accent'
         : 'text-muted hover:bg-line hover:text-fg',
     ].join(' ')
 
@@ -304,25 +303,54 @@ export default function AppLayout() {
         className="flex flex-shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200"
         style={{ width: collapsed ? 64 : 260 }}
       >
-        {/* Шапка сайдбара: название + кнопка сворачивания */}
-        <div className="flex h-16 items-center justify-between px-3">
-          {!collapsed && (
-            <span className="truncate px-1 font-semibold text-fg">
-              Планировщик задач
-            </span>
+        {/* Шапка сайдбара: знак + название + кнопка сворачивания.
+            В свёрнутом виде остаётся только знак — он же разворачивает меню. */}
+        <div
+          className={cn(
+            'flex h-16 items-center px-3',
+            collapsed ? 'justify-center' : 'justify-between'
           )}
-          <button
-            type="button"
-            onClick={() => setCollapsed((v) => !v)}
-            className="rounded-lg p-2 text-muted transition hover:bg-line hover:text-fg"
-            aria-label={collapsed ? 'Развернуть меню' : 'Свернуть меню'}
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="h-5 w-5" />
-            ) : (
-              <PanelLeftClose className="h-5 w-5" />
-            )}
-          </button>
+        >
+          {collapsed ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              className="rounded-lg transition hover:opacity-80"
+              aria-label="Развернуть меню"
+              title="Азимут — развернуть меню"
+            >
+              <img
+                src="/azimut-mark.svg"
+                alt="Azimut"
+                width={28}
+                height={28}
+                className="h-7 w-7"
+              />
+            </button>
+          ) : (
+            <>
+              <span className="flex min-w-0 items-center px-1">
+                <img
+                  src="/azimut-mark.svg"
+                  alt="Azimut"
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 shrink-0"
+                />
+                <span className="ml-[10px] truncate font-semibold text-fg">
+                  Азимут
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setCollapsed(true)}
+                className="rounded-lg p-2 text-muted transition hover:bg-line hover:text-fg"
+                aria-label="Свернуть меню"
+              >
+                <PanelLeftClose className="h-5 w-5" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Навигация */}
@@ -380,7 +408,7 @@ export default function AppLayout() {
                             >
                               <span
                                 className="h-2 w-2 flex-shrink-0 rounded-full"
-                                style={{ backgroundColor: p.color ?? '#2563eb' }}
+                                style={{ backgroundColor: p.color ?? '#ecc371' }}
                               />
                               <span className="truncate">{p.name}</span>
                             </NavLink>
@@ -426,7 +454,7 @@ export default function AppLayout() {
                 className="h-9 w-9 flex-shrink-0 rounded-full object-cover"
               />
             ) : (
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-white">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-on-accent">
                 {getInitials(profile?.full_name)}
               </span>
             )}

@@ -1,6 +1,6 @@
 <!-- Language: **English** · [Русский](README.ru.md) -->
 
-# TaskFlow
+# Azimut
 
 Internal task-management system with role-based workflow, deadline control, and process analytics.
 

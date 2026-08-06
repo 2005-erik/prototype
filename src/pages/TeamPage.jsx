@@ -192,7 +192,7 @@ export default function TeamPage() {
           <button
             type="button"
             onClick={() => setView('columns')}
-            className={cn('rounded p-1.5 transition', view === 'columns' ? 'bg-accent text-white' : 'text-muted hover:text-fg')}
+            className={cn('rounded p-1.5 transition', view === 'columns' ? 'bg-accent text-on-accent' : 'text-muted hover:text-fg')}
             aria-label="Колонки"
           >
             <Columns3 className="h-4 w-4" />
@@ -200,7 +200,7 @@ export default function TeamPage() {
           <button
             type="button"
             onClick={() => setView('table')}
-            className={cn('rounded p-1.5 transition', view === 'table' ? 'bg-accent text-white' : 'text-muted hover:text-fg')}
+            className={cn('rounded p-1.5 transition', view === 'table' ? 'bg-accent text-on-accent' : 'text-muted hover:text-fg')}
             aria-label="Таблица"
           >
             <Table2 className="h-4 w-4" />

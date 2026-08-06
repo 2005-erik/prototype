@@ -11,6 +11,7 @@ import {
   Import,
   Paperclip,
   MessageSquareWarning,
+  EyeOff,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useProjects } from '../hooks/useProjects'
@@ -23,9 +24,10 @@ import {
 } from '../lib/trello'
 import Button from '../components/ui/Button'
 import Select from '../components/ui/Select'
+import { AzimutOverlay } from '../components/ui/AzimutLoader'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
-import { cn } from '../lib/utils'
+import { cn, plural } from '../lib/utils'
 
 // Статусы по умолчанию нового проекта (создаются триггером БД) — по code
 const DEFAULT_STATUS_OPTIONS = [
@@ -52,9 +54,9 @@ function Stepper({ step }) {
             className={cn(
               'flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold',
               step > s.n
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-on-accent'
                 : step === s.n
-                  ? 'bg-accent text-white'
+                  ? 'bg-accent text-on-accent'
                   : 'border border-line bg-app text-muted'
             )}
           >
@@ -360,6 +362,16 @@ export default function TrelloImportPage() {
                   </span>
                 </div>
               )}
+              {report.tasks_completed > 0 && (
+                <div className="flex items-start gap-2 rounded-lg border border-accent/40 bg-accent/10 p-3 text-sm text-accent">
+                  <EyeOff className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    {`${report.tasks_completed} ${plural(report.tasks_completed, 'задача', 'задачи', 'задач')} в статусе «${report.completed_status_name ?? 'Выполнено'}»`}{' '}
+                    — включите «Показывать выполненные» на доске, чтобы их
+                    увидеть. По кнопке ниже фильтр включится сам.
+                  </span>
+                </div>
+              )}
               {report.warnings?.comments_truncated && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-500">
                   <MessageSquareWarning className="mt-0.5 h-4 w-4 shrink-0" />
@@ -398,7 +410,13 @@ export default function TrelloImportPage() {
               >
                 Отменить импорт
               </Button>
-              <Button onClick={() => navigate(`/board/${report.project_id}`)}>
+              <Button
+                onClick={() =>
+                  // completed=1 — сразу показать задачи, импортированные
+                  // в завершающем статусе (иначе доска выглядит пустой)
+                  navigate(`/board/${report.project_id}?completed=1`)
+                }
+              >
                 Перейти на доску
               </Button>
             </div>
@@ -422,6 +440,22 @@ export default function TrelloImportPage() {
   // =====================================================================
   return (
     <div className="mx-auto max-w-2xl">
+      {/* Импорт идёт одной транзакцией на сервере — доля выполненного
+          оттуда не приходит, поэтому показываем объём работы, а не процент */}
+      {busy && (
+        <AzimutOverlay
+          title="Переносим задачи из Trello"
+          detail={
+            summary
+              ? `${summary.boardName} · карточек: ${
+                  summary.cardsActive +
+                  (options.import_archived ? summary.cardsArchived : 0)
+                }`
+              : 'Это может занять до минуты'
+          }
+        />
+      )}
+
       <div className="mb-5 flex items-center gap-2">
         <Import className="h-6 w-6 text-accent" />
         <h2 className="text-xl font-semibold text-fg">Импорт из Trello</h2>
@@ -509,7 +543,7 @@ export default function TrelloImportPage() {
                   setStatusMap({})
                   setMemberMap({})
                 }}
-                className="mt-0.5 accent-blue-600"
+                className="mt-0.5 accent-[#ecc371]"
               />
               <span className="min-w-0">
                 <span className="block text-sm font-medium text-fg">Создать новый проект</span>
@@ -536,7 +570,7 @@ export default function TrelloImportPage() {
                     setStatusMap({})
                     setMemberMap({})
                   }}
-                  className="mt-0.5 accent-blue-600"
+                  className="mt-0.5 accent-[#ecc371]"
                 />
                 <span className="block text-sm font-medium text-fg">
                   Импортировать в существующий проект
@@ -635,7 +669,7 @@ export default function TrelloImportPage() {
                     onChange={(e) =>
                       setOptions((prev) => ({ ...prev, [o.key]: e.target.checked }))
                     }
-                    className="accent-blue-600"
+                    className="accent-[#ecc371]"
                   />
                   {o.label}
                 </label>

@@ -20,7 +20,7 @@ import { useToast } from '../../ui/Toast'
 
 const COLORS = [
   '#94a3b8',
-  '#3b82f6',
+  '#ecc371',
   '#f59e0b',
   '#ef4444',
   '#22c55e',
@@ -131,7 +131,7 @@ function StatusRow({ status, onUpdate, onDelete }) {
                 type="checkbox"
                 checked={!!status[f.key]}
                 onChange={() => onUpdate(status, { flag: f.key })}
-                className="accent-blue-600"
+                className="accent-[#ecc371]"
               />
               {f.label}
             </label>

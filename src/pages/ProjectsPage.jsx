@@ -99,7 +99,7 @@ export default function ProjectsPage() {
             type="checkbox"
             checked={showArchived}
             onChange={(e) => setShowArchived(e.target.checked)}
-            className="accent-blue-600"
+            className="accent-[#ecc371]"
           />
           Показать архивные
         </label>

@@ -55,8 +55,8 @@ export const PRIORITY = {
   },
   medium: {
     label: 'Средний',
-    color: '#3b82f6',
-    badge: 'bg-blue-100 text-blue-700',
+    color: '#ecc371',
+    badge: 'bg-[#ecc371]/15 text-[#ecc371]',
     icon: Minus,
   },
   high: {
@@ -102,8 +102,8 @@ export const DEADLINE_STATE = {
   },
   normal: {
     label: 'В срок',
-    color: '#3b82f6',
-    badge: 'bg-blue-100 text-blue-700',
+    color: '#2bbaac',
+    badge: 'bg-[#2bbaac]/15 text-[#2bbaac]',
   },
 }
 
@@ -116,8 +116,8 @@ export const LOAD_STATE = {
   },
   normal: {
     label: 'Норма',
-    color: '#3b82f6',
-    badge: 'bg-blue-100 text-blue-700',
+    color: '#2bbaac',
+    badge: 'bg-[#2bbaac]/15 text-[#2bbaac]',
   },
   busy: {
     label: 'Занят',

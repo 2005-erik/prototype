@@ -89,7 +89,7 @@ export default function EmployeeTable({ rows = [], selected, onToggleSelect }) {
                     checked={checked}
                     disabled={!checked && limitReached}
                     onChange={() => onToggleSelect(e.user_id)}
-                    className="accent-blue-600 disabled:opacity-40"
+                    className="accent-[#ecc371] disabled:opacity-40"
                   />
                 </td>
                 <td className="px-3 py-2">
