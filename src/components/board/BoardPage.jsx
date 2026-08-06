@@ -18,6 +18,7 @@ import {
   useProjectsOverview,
 } from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
+import { useProjectTags, useTaskTagsMap } from '../../hooks/useTags'
 import { PRIORITY, compareByPriorityAndDue } from '../../lib/constants'
 import { getInitials, cn } from '../../lib/utils'
 import BoardColumn from './BoardColumn'
@@ -28,6 +29,7 @@ import TaskDrawer from '../task/TaskDrawer'
 import CreateTaskModal from '../task/CreateTaskModal'
 import PriorityMenu from '../task/PriorityMenu'
 import Button from '../ui/Button'
+import TagChip from '../ui/TagChip'
 import EmptyState from '../ui/EmptyState'
 import Skeleton from '../ui/Skeleton'
 import { useToast } from '../ui/Toast'
@@ -83,6 +85,7 @@ export default function BoardPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [priority, setPriority] = useState(null)
   const [assignees, setAssignees] = useState(() => new Set())
+  const [tagIds, setTagIds] = useState(() => new Set())
   const [showCompleted, setShowCompleted] = useState(false)
   // Спецфильтр из URL (переход с дашборда): overdue | today | stale
   const [special, setSpecial] = useState(null)
@@ -99,6 +102,8 @@ export default function BoardPage() {
     if (searchParams.get('completed') === '1') setShowCompleted(true)
     const p = searchParams.get('priority')
     if (p && PRIORITY[p]) setPriority(p)
+    const tg = searchParams.get('tags')
+    if (tg) setTagIds(new Set(tg.split(',').filter(Boolean)))
   }, [searchParams])
 
   // debounce поиска 300мс
@@ -121,6 +126,13 @@ export default function BoardPage() {
     showCompleted,
   })
 
+  // Теги проекта и их привязка к задачам (одним запросом на проект)
+  const { tags: projectTags } = useProjectTags(activeProjectId)
+  const { tagsByTask, refetch: refetchTaskTags } = useTaskTagsMap(
+    activeProjectId,
+    tasks.length
+  )
+
   // Ошибки хуков — показываем через Toast (презентационный слой)
   useEffect(() => {
     if (projectsError) toast.error(projectsError)
@@ -138,6 +150,11 @@ export default function BoardPage() {
     if (assignees.size > 0) {
       list = list.filter((t) => assignees.has(t.assignee_id))
     }
+    if (tagIds.size > 0) {
+      list = list.filter((t) =>
+        (tagsByTask[t.id] ?? []).some((tag) => tagIds.has(tag.id))
+      )
+    }
     if (special === 'overdue') {
       list = list.filter((t) => t.deadline_state === 'overdue')
     } else if (special === 'today') {
@@ -152,7 +169,7 @@ export default function BoardPage() {
       list = list.filter((t) => t.is_stale)
     }
     return list
-  }, [tasks, assignees, special])
+  }, [tasks, assignees, special, tagIds, tagsByTask])
 
   // Группировка по статусу. Внутри колонки: критические сверху,
   // дальше по сроку, при равенстве — ручной порядок (position).
@@ -269,6 +286,7 @@ export default function BoardPage() {
     setDebouncedSearch('')
     setPriority(null)
     setAssignees(new Set())
+    setTagIds(new Set())
     setShowCompleted(false)
     setSpecial(null)
   }
@@ -297,6 +315,7 @@ export default function BoardPage() {
     !!debouncedSearch ||
     !!priority ||
     assignees.size > 0 ||
+    tagIds.size > 0 ||
     showCompleted ||
     !!special
 
@@ -416,6 +435,35 @@ export default function BoardPage() {
           ))}
         </div>
 
+        {/* Направления (теги) — мультивыбор */}
+        {projectTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1">
+            {projectTags.map((tag) => {
+              const active = tagIds.has(tag.id)
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() =>
+                    setTagIds((prev) => {
+                      const next = new Set(prev)
+                      if (next.has(tag.id)) next.delete(tag.id)
+                      else next.add(tag.id)
+                      return next
+                    })
+                  }
+                  className={cn(
+                    'rounded transition',
+                    active ? 'ring-2 ring-accent ring-offset-1 ring-offset-app' : 'opacity-70 hover:opacity-100'
+                  )}
+                >
+                  <TagChip tag={tag} />
+                </button>
+              )
+            })}
+          </div>
+        )}
+
         {/* Показывать выполненные */}
         <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted">
           <input
@@ -495,6 +543,7 @@ export default function BoardPage() {
                 onCancelAdd={() => setAddingColumnId(null)}
                 onSubmitAdd={handleSubmitAdd}
                 onOpenTask={setOpenTask}
+                tagsByTask={tagsByTask}
                 onTaskContextMenu={(e, task) =>
                   setPrioMenu({ task, x: e.clientX, y: e.clientY })
                 }
@@ -541,6 +590,7 @@ export default function BoardPage() {
           task={openTask}
           statuses={statuses}
           members={members}
+          onTagsChanged={refetchTaskTags}
           onClose={() => setOpenTask(null)}
         />
       )}

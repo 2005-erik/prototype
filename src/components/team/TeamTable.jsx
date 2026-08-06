@@ -5,12 +5,7 @@ import PriorityChip from '../ui/PriorityChip'
 import { LOAD_STATE, DEADLINE_STATE } from '../../lib/constants'
 import { formatDeadline, cn } from '../../lib/utils'
 
-const BAR_COLOR = {
-  free: 'bg-slate-500',
-  normal: 'bg-[#2bbaac]',
-  busy: 'bg-orange-500',
-  overloaded: 'bg-red-500',
-}
+const barClass = (state) => LOAD_STATE[state]?.bar ?? LOAD_STATE.normal.bar
 
 const COLUMNS = [
   { key: 'name', label: 'Сотрудник' },
@@ -105,7 +100,7 @@ export default function TeamTable({ columns, members, onOpen, onReassign }) {
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-line">
-                        <div className={cn('h-full rounded-full', BAR_COLOR[load.load_state])} style={{ width: `${Math.min(100, load.load_percent)}%` }} />
+                        <div className={cn('h-full rounded-full', barClass(load.load_state))} style={{ width: `${Math.min(100, load.load_percent)}%` }} />
                       </div>
                       <span className="text-xs" style={{ color: LOAD_STATE[load.load_state]?.color }}>
                         {LOAD_STATE[load.load_state]?.label}

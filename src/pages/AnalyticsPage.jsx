@@ -20,6 +20,8 @@ import OverviewTab from '../components/analytics/OverviewTab'
 import BottlenecksTab from '../components/analytics/BottlenecksTab'
 import EmployeesTab from '../components/analytics/EmployeesTab'
 import TasksTab from '../components/analytics/TasksTab'
+import TagsBreakdown from '../components/analytics/TagsBreakdown'
+import CollapsibleSection from '../components/ui/CollapsibleSection'
 import TaskDrawer from '../components/task/TaskDrawer'
 
 const TABS = [
@@ -27,6 +29,7 @@ const TABS = [
   { key: 'bottlenecks', label: 'Узкие места' },
   { key: 'employees', label: 'Сотрудники' },
   { key: 'tasks', label: 'Задачи' },
+  { key: 'tags', label: 'Направления' },
 ]
 
 const PERIODS = [
@@ -178,7 +181,7 @@ export default function AnalyticsPage() {
           title="Задач пока нет"
           description="Создайте первую или импортируйте из Trello — аналитика появится следом."
         />
-      ) : !enoughData && tab !== 'tasks' ? (
+      ) : !enoughData && tab !== 'tasks' && tab !== 'tags' ? (
         <EmptyState
           icon={BarChart3}
           title="Недостаточно данных для анализа"
@@ -200,6 +203,18 @@ export default function AnalyticsPage() {
             <EmployeesTab projectId={pid} period={period} />
           )}
           {tab === 'tasks' && <TasksTab tasks={tasks} onOpen={setOpenTask} />}
+          {tab === 'tags' && (
+            <CollapsibleSection
+              id="analytics.tags"
+              title="Задачи по направлениям"
+              defaultOpen
+            >
+              <TagsBreakdown
+                projectId={pid}
+                onSelect={(tagId) => navigate(`/board/${pid}?tags=${tagId}`)}
+              />
+            </CollapsibleSection>
+          )}
         </div>
       )}
 

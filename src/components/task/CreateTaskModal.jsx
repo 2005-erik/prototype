@@ -162,7 +162,7 @@ export default function CreateTaskModal({
                         )}
                       >
                         {overloaded && <AlertTriangle className="h-3 w-3" />}
-                        {w.active_tasks} задач · {load?.label ?? ''}
+                        {w.active_tasks} в работе · {load?.label ?? ''}
                       </span>
                     )}
                   </span>

@@ -19,6 +19,7 @@ export default function BoardColumn({
   onSubmitAdd,
   onOpenTask,
   onTaskContextMenu,
+  tagsByTask = {},
 }) {
   const [title, setTitle] = useState('')
 
@@ -125,6 +126,7 @@ export default function BoardColumn({
             <TaskCard
               key={task.id}
               task={task}
+              tags={tagsByTask[task.id] ?? []}
               onOpen={onOpenTask}
               onContextMenu={onTaskContextMenu}
             />

@@ -117,7 +117,9 @@ export default function MembersTab({ settings, currentUserId }) {
                           load?.badge
                         )}
                       >
-                        {w.active_tasks} · {load?.label ?? ''}
+                        {w.active_tasks} в работе
+                        {w.queued_tasks > 0 ? ` · ${w.queued_tasks} в очереди` : ''} ·{' '}
+                        {load?.label ?? ''}
                       </span>
                     ) : (
                       <span className="text-muted">—</span>

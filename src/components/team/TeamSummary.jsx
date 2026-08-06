@@ -1,11 +1,12 @@
 import { cn } from '../../lib/utils'
 
-// totals: { active, free, overloaded, unassigned, overdue }
+// totals: { active, queued, high, overloaded, unassigned, overdue }
 export default function TeamSummary({ totals, filter, onFilter }) {
-  const chip = (key, label, value, danger) => (
+  const chip = (key, label, value, danger, filterable = true) => (
     <button
       type="button"
-      onClick={() => onFilter(filter === key ? null : key)}
+      disabled={!filterable}
+      onClick={() => filterable && onFilter(filter === key ? null : key)}
       className={cn(
         'flex items-baseline gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition',
         filter === key ? 'border-accent bg-accent/10' : 'border-line hover:border-accent'
@@ -20,8 +21,9 @@ export default function TeamSummary({ totals, filter, onFilter }) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {chip('active', 'активных', totals.active)}
-      {chip('free', 'свободных', totals.free)}
+      {chip('active', 'в работе', totals.active)}
+      {chip('queued', 'в очереди', totals.queued, false, false)}
+      {chip('high', 'высокая загрузка', totals.high)}
       {chip('overloaded', 'перегружено', totals.overloaded, true)}
       {chip('unassigned', 'без исполнителя', totals.unassigned, true)}
       {chip('overdue', 'просрочено', totals.overdue, true)}

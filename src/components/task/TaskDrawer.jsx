@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTaskDetails } from '../../hooks/useTaskDetails'
+import { useProjectTags, useTaskTags } from '../../hooks/useTags'
 import { PRIORITY } from '../../lib/constants'
 import { formatDateTime, formatRelative, cn } from '../../lib/utils'
 import Drawer from '../ui/Drawer'
@@ -28,6 +29,7 @@ import Select from '../ui/Select'
 import DatePicker from '../ui/DatePicker'
 import Avatar from '../ui/Avatar'
 import Badge from '../ui/Badge'
+import TagChip from '../ui/TagChip'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { SkeletonText } from '../ui/Skeleton'
@@ -69,7 +71,7 @@ const ACTIVITY_LABEL = {
   priority_changed: 'изменил(а) приоритет',
 }
 
-export default function TaskDrawer({ task: initial, statuses = [], members = [], onClose }) {
+export default function TaskDrawer({ task: initial, statuses = [], members = [], onTagsChanged, onClose }) {
   const { user, isManager } = useAuth()
   const { toast } = useToast()
   const details = useTaskDetails(initial?.id)
@@ -88,10 +90,17 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
   const [showHistory, setShowHistory] = useState(false)
   const [descExpanded, setDescExpanded] = useState(false)
   const [allComments, setAllComments] = useState(false)
+  const [tagPickerOpen, setTagPickerOpen] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
 
   // Подтверждение удаления (вложение / пункт чек-листа)
   const [confirm, setConfirm] = useState(null)
   const [confirmBusy, setConfirmBusy] = useState(false)
+
+  // Теги: справочник проекта и теги самой задачи.
+  // Хуки вызываем до раннего возврата — правило порядка хуков.
+  const projectTags = useProjectTags(t?.project_id ?? null)
+  const taskTags = useTaskTags(t?.id ?? null)
 
   if (!t) return null
 
@@ -107,6 +116,30 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
     isManager || (isAssignee && att.user_id === user?.id)
 
   const prio = PRIORITY[t.priority]
+
+  const canEditTags = isManager || isAssignee
+  const availableTags = projectTags.tags.filter(
+    (tag) => !taskTags.tags.some((x) => x.id === tag.id)
+  )
+
+  const addTag = async (tag) => {
+    const { error } = await taskTags.addTag(tag)
+    if (error) toast.error(error)
+    else onTagsChanged?.()
+  }
+
+  const removeTag = async (tag) => {
+    const { error } = await taskTags.removeTag(tag)
+    if (error) toast.error(error)
+    else onTagsChanged?.()
+  }
+
+  const createAndAddTag = async () => {
+    const { data, error } = await projectTags.createTag(newTagName)
+    if (error) return toast.error(error)
+    setNewTagName('')
+    if (data) await addTag(data)
+  }
 
   const descLong = (t.description?.length ?? 0) > DESC_LIMIT
   const visibleComments =
@@ -416,6 +449,72 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                   </button>
                 )}
               </>
+            )}
+          </section>
+
+          {/* Направления работы */}
+          <section>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="text-xs font-medium uppercase text-muted">
+                Направления
+              </label>
+              {canEditTags && (
+                <button
+                  type="button"
+                  onClick={() => setTagPickerOpen((v) => !v)}
+                  className="flex items-center gap-1 text-xs font-medium text-accent transition hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Добавить
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {taskTags.tags.map((tag) => (
+                <TagChip
+                  key={tag.id}
+                  tag={tag}
+                  onRemove={canEditTags ? removeTag : undefined}
+                />
+              ))}
+              {taskTags.tags.length === 0 && (
+                <span className="text-sm text-muted/60">Тегов нет</span>
+              )}
+            </div>
+
+            {tagPickerOpen && canEditTags && (
+              <div className="mt-2 rounded-lg border border-line bg-app p-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {availableTags.map((tag) => (
+                    <button key={tag.id} type="button" onClick={() => addTag(tag)}>
+                      <TagChip tag={tag} className="hover:opacity-80" />
+                    </button>
+                  ))}
+                  {availableTags.length === 0 && (
+                    <span className="text-xs text-muted/60">
+                      Все теги проекта уже проставлены
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    className="flex-1"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && createAndAddTag()}
+                    placeholder="Новое направление…"
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={createAndAddTag}
+                    disabled={!newTagName.trim()}
+                  >
+                    Создать
+                  </Button>
+                </div>
+              </div>
             )}
           </section>
 

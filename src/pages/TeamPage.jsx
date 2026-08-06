@@ -6,6 +6,7 @@ import {
   useManagedProjectMembers,
 } from '../hooks/useProjects'
 import { useTeam } from '../hooks/useTeam'
+import { useAuth } from '../contexts/AuthContext'
 import Select from '../components/ui/Select'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
@@ -23,6 +24,7 @@ import TaskDrawer from '../components/task/TaskDrawer'
 
 export default function TeamPage() {
   const { toast } = useToast()
+  const { isManager } = useAuth()
   const { projects } = useProjects()
   const [pid, setPid] = useState('') // '' = все проекты
   const projectId = pid || null
@@ -36,6 +38,7 @@ export default function TeamPage() {
     reassignTask,
     patchTask,
     patchTasks,
+    refetch,
   } = useTeam(projectId)
 
   useEffect(() => {
@@ -70,8 +73,10 @@ export default function TeamPage() {
   // Сводка
   const totals = useMemo(
     () => ({
-      active: allTasks.length,
-      free: columns.filter((c) => c.load.load_state === 'free').length,
+      // «активных» — именно в работе, а не всё незакрытое
+      active: columns.reduce((sum, c) => sum + c.load.active, 0),
+      queued: columns.reduce((sum, c) => sum + c.load.queued, 0),
+      high: columns.filter((c) => c.load.load_state === 'high').length,
       overloaded: columns.filter((c) => c.load.load_state === 'overloaded').length,
       unassigned: unassigned.length,
       overdue: allTasks.filter((t) => t.deadline_state === 'overdue').length,
@@ -89,8 +94,9 @@ export default function TeamPage() {
     let cols = columns
     if (nameQ)
       cols = cols.filter((c) => (c.profile?.full_name ?? '').toLowerCase().includes(nameQ))
-    if (filter === 'free') cols = cols.filter((c) => c.load.load_state === 'free')
-    if (filter === 'overloaded') cols = cols.filter((c) => c.load.load_state === 'overloaded')
+    if (filter === 'high') cols = cols.filter((c) => c.load.load_state === 'high')
+    if (filter === 'overloaded')
+      cols = cols.filter((c) => c.load.load_state === 'overloaded')
     if (overdueOnly)
       cols = cols.map((c) => ({
         ...c,
@@ -231,6 +237,8 @@ export default function TeamPage() {
         <MemberTasksDrawer
           column={columns.find((c) => c.user_id === memberDrawer.user_id) ?? memberDrawer}
           projectsById={showAllProjects ? projectsById : null}
+          canEditLimit={isManager}
+          onLimitChanged={refetch}
           onOpenTask={(t) => {
             setMemberDrawer(null)
             setOpenTask(t)

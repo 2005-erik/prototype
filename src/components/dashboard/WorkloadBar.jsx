@@ -2,17 +2,10 @@ import Avatar from '../ui/Avatar'
 import { LOAD_STATE } from '../../lib/constants'
 import { cn } from '../../lib/utils'
 
-// Цвет прогресс-бара по состоянию загрузки
-const BAR_COLOR = {
-  free: 'bg-slate-500',
-  normal: 'bg-[#2bbaac]',
-  busy: 'bg-orange-500',
-  overloaded: 'bg-red-500',
-}
-
 // Одна строка загрузки сотрудника
 export default function WorkloadBar({ row, profile, onSelect }) {
-  const load = LOAD_STATE[row.load_state]
+  const load = LOAD_STATE[row.load_state] ?? LOAD_STATE.normal
+  // Полоса упирается в 100%: перегруз читается цветом и подписью
   const pct = Math.min(100, Math.round(row.load_percent ?? 0))
 
   return (
@@ -26,7 +19,8 @@ export default function WorkloadBar({ row, profile, onSelect }) {
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm text-fg">{row.full_name}</span>
           <span className="flex-shrink-0 text-xs text-muted">
-            {row.active_tasks} / {row.max_concurrent_tasks} задач
+            {row.active_tasks} / {row.work_limit} в работе
+            {row.queued_tasks > 0 && ` · ${row.queued_tasks} в очереди`}
           </span>
         </div>
         {profile?.position && (
@@ -37,7 +31,7 @@ export default function WorkloadBar({ row, profile, onSelect }) {
             <div
               className={cn(
                 'h-full rounded-full transition-all',
-                BAR_COLOR[row.load_state] ?? 'bg-slate-500'
+                load.bar
               )}
               style={{ width: `${pct}%` }}
             />

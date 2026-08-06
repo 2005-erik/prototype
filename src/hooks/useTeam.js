@@ -1,14 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-
-// Состояние загрузки по проценту (как в employee_workload)
-function loadState(percent, max) {
-  if (!max) return 'normal'
-  if (percent < 50) return 'free'
-  if (percent < 80) return 'normal'
-  if (percent <= 100) return 'busy'
-  return 'overloaded'
-}
+import { DEFAULT_WORK_LIMIT, loadStateFor, isInWork } from '../lib/constants'
 
 const URGENCY = {
   overdue: 0,
@@ -35,26 +27,31 @@ function sortByUrgency(tasks) {
   })
 }
 
-// Метрики загрузки сотрудника из его активных задач
-function computeLoad(tasks, maxConcurrent) {
-  const active = tasks.length
+// Метрики загрузки сотрудника.
+// Нагружают только задачи в работе; задачи в начальном статусе — очередь,
+// она видна отдельным числом и в процент не входит.
+function computeLoad(tasks, workLimit, statusById) {
+  const inWork = tasks.filter((t) => isInWork(statusById[t.status_id]))
+  const queued = tasks.length - inWork.length
   const overdue = tasks.filter((t) => t.deadline_state === 'overdue').length
   const today = tasks.filter(
     (t) => t.deadline_state !== 'overdue' && isToday(t.due_date)
   ).length
   const rework = tasks.filter((t) => t.status_code === 'rework').length
   const noDue = tasks.filter((t) => !t.due_date).length
-  const max = maxConcurrent ?? 10
-  const percent = max > 0 ? Math.round((active * 100) / max) : 0
+  const limit = workLimit ?? DEFAULT_WORK_LIMIT
+  const percent = limit > 0 ? Math.round((inWork.length * 100) / limit) : 0
   return {
-    active,
+    active: inWork.length,
+    queued,
+    total: tasks.length,
     overdue,
     today,
     rework,
     noDue,
-    max_concurrent_tasks: max,
+    work_limit: limit,
     load_percent: percent,
-    load_state: loadState(percent, max),
+    load_state: loadStateFor(percent, limit),
   }
 }
 
@@ -65,6 +62,7 @@ function computeLoad(tasks, maxConcurrent) {
 export function useTeam(projectId) {
   const [tasks, setTasks] = useState([])
   const [memberList, setMemberList] = useState([]) // { user_id, profile }
+  const [statusById, setStatusById] = useState({}) // id → { is_initial, is_final }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const mountedRef = useRef(true)
@@ -83,9 +81,18 @@ export function useTeam(projectId) {
         .is('completed_at', null)
       if (projectId) tQuery = tQuery.eq('project_id', projectId)
 
-      const [mRes, tRes] = await Promise.all([mQuery, tQuery])
+      let sQuery = supabase
+        .from('statuses')
+        .select('id, is_initial, is_final')
+      if (projectId) sQuery = sQuery.eq('project_id', projectId)
+
+      const [mRes, tRes, sRes] = await Promise.all([mQuery, tQuery, sQuery])
       if (mRes.error) throw mRes.error
       if (tRes.error) throw tRes.error
+      if (sRes.error) throw sRes.error
+
+      const statusMap = {}
+      for (const st of sRes.data ?? []) statusMap[st.id] = st
 
       // Уникальные участники по user_id
       const byId = new Map()
@@ -97,6 +104,7 @@ export function useTeam(projectId) {
 
       if (mountedRef.current) {
         setMemberList([...byId.values()])
+        setStatusById(statusMap)
         setTasks(tRes.data ?? [])
         setError(null)
       }
@@ -140,12 +148,12 @@ export function useTeam(projectId) {
       return {
         ...m,
         tasks: sortByUrgency(t),
-        load: computeLoad(t, m.profile?.max_concurrent_tasks),
+        load: computeLoad(t, m.profile?.work_limit, statusById),
       }
     })
     // перегруженные сверху
     return arr.sort((a, b) => b.load.load_percent - a.load.load_percent)
-  }, [memberList, tasks])
+  }, [memberList, tasks, statusById])
 
   const unassigned = useMemo(
     () => sortByUrgency(tasks.filter((t) => !t.assignee_id)),

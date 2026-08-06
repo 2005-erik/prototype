@@ -104,8 +104,9 @@ export function useReportExport() {
         // Лист «Загрузка»
         const workRows = workload.map((w) => ({
           Сотрудник: w.full_name,
-          Активных: w.active_tasks,
-          Максимум: w.max_concurrent_tasks,
+          'В работе': w.active_tasks,
+          'В очереди': w.queued_tasks,
+          Лимит: w.work_limit,
           Просрочено: w.overdue_tasks,
           Критичных: w.critical_tasks,
           'Загрузка, %': w.load_percent,

@@ -4,25 +4,14 @@ import Button from '../ui/Button'
 import { LOAD_STATE } from '../../lib/constants'
 import { cn } from '../../lib/utils'
 
-const BAR_COLOR = {
-  free: 'bg-slate-500',
-  normal: 'bg-[#2bbaac]',
-  busy: 'bg-orange-500',
-  overloaded: 'bg-red-500',
-}
-
 // Карточка сотрудника — только сводка. Список задач открывается
 // в панели справа: так сетка не перестраивается при раскрытии.
 export function TeamMemberCard({ column, onOpen }) {
   const load = column.load
+  const state = LOAD_STATE[load?.load_state] ?? LOAD_STATE.normal
   const overloaded = load?.load_state === 'overloaded'
+  // Полоса не растёт дальше 100% — при превышении она просто меняет цвет
   const pct = Math.min(100, load?.load_percent ?? 0)
-
-  // «в работе» — начатые, «в очереди» — всё остальное активное
-  const inProgress = column.tasks.filter(
-    (t) => t.status_code === 'in_progress'
-  ).length
-  const queued = Math.max(0, column.tasks.length - inProgress)
 
   return (
     <button
@@ -56,22 +45,26 @@ export function TeamMemberCard({ column, onOpen }) {
       <div className="mt-2.5 flex items-center gap-2">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-line">
           <div
-            className={cn('h-full rounded-full', BAR_COLOR[load.load_state])}
+            className={cn('h-full rounded-full transition-all', state.bar)}
             style={{ width: `${pct}%` }}
           />
         </div>
         <span
           className="flex-shrink-0 text-[11px] font-medium"
-          style={{ color: LOAD_STATE[load.load_state]?.color }}
+          style={{ color: state.color }}
         >
-          {LOAD_STATE[load.load_state]?.label}
+          {state.label}
         </span>
       </div>
 
       {/* Сводка вместо списка */}
       <p className="mt-2 text-xs text-muted">
-        {inProgress} в работе · {queued} в очереди
-        <span className="text-muted/60"> · порог {load.max_concurrent_tasks}</span>
+        <span className="font-medium text-fg">{load.active} в работе</span> ·{' '}
+        {load.queued} в очереди
+        <span className="text-muted/60">
+          {' '}
+          · лимит {load.work_limit}
+        </span>
       </p>
 
       {(load.overdue > 0 || load.today > 0) && (

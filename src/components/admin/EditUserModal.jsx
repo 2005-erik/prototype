@@ -4,6 +4,8 @@ import Input from '../ui/Input'
 import Button from '../ui/Button'
 import { useToast } from '../ui/Toast'
 import ProjectPicker, { projectsRequiredFor } from './ProjectPicker'
+import { DEFAULT_WORK_LIMIT } from '../../lib/constants'
+import { useWorkLimit } from '../../hooks/useWorkLimit'
 
 // Сравнение состава проектов (порядок не важен)
 function sameSet(a, b) {
@@ -26,6 +28,10 @@ export default function EditUserModal({
   const [projectIds, setProjectIds] = useState(
     () => new Set((user.projects ?? []).map((p) => p.id))
   )
+  const [workLimit, setWorkLimit] = useState(
+    String(user.work_limit ?? DEFAULT_WORK_LIMIT)
+  )
+  const { setWorkLimit: saveWorkLimit } = useWorkLimit()
   const [busy, setBusy] = useState(false)
 
   const initialProjects = new Set((user.projects ?? []).map((p) => p.id))
@@ -53,6 +59,20 @@ export default function EditUserModal({
     if (error) {
       setBusy(false)
       return toast.error(error)
+    }
+
+    // Лимит задач — через RPC: колонку нельзя открыть на запись напрямую
+    const limitValue = Number(workLimit)
+    if (!Number.isFinite(limitValue) || limitValue <= 0) {
+      setBusy(false)
+      return toast.error('Лимит задач должен быть больше нуля')
+    }
+    if (limitValue !== (user.work_limit ?? DEFAULT_WORK_LIMIT)) {
+      const { error: lErr } = await saveWorkLimit(user.id, limitValue)
+      if (lErr) {
+        setBusy(false)
+        return toast.error(lErr)
+      }
     }
 
     // Проекты сохраняем отдельным запросом, только если состав изменился
@@ -104,6 +124,23 @@ export default function EditUserModal({
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
         />
+        <div>
+          <label className="mb-1 block text-xs font-medium uppercase text-muted">
+            Лимит одновременных задач
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={workLimit}
+            onChange={(e) => setWorkLimit(e.target.value)}
+            className="w-28 rounded-lg border border-line bg-app px-3 py-2 text-sm text-fg outline-none focus:border-accent"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Сколько задач в работе сотрудник тянет одновременно. Очередь
+            («Новая») в лимит не входит.
+          </p>
+        </div>
+
         <ProjectPicker
           projects={projects}
           selected={projectIds}

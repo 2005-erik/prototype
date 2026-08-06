@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react'
 import { Camera, Check, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { DEFAULT_WORK_LIMIT } from '../lib/constants'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import Avatar from '../components/ui/Avatar'
@@ -194,7 +195,7 @@ export default function ProfilePage() {
               Лимит одновременных задач
             </span>
             <p className="text-sm text-muted">
-              {profile?.max_concurrent_tasks ?? '—'}{' '}
+              {profile?.work_limit ?? DEFAULT_WORK_LIMIT}{' '}
               <span className="text-xs">(задаёт руководитель)</span>
             </p>
           </div>

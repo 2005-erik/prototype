@@ -3,16 +3,10 @@ import { usePersonalWorkload } from '../../hooks/useProjects'
 import { LOAD_STATE } from '../../lib/constants'
 import { cn } from '../../lib/utils'
 
-const BAR_COLOR = {
-  free: 'bg-slate-500',
-  normal: 'bg-[#2bbaac]',
-  busy: 'bg-orange-500',
-  overloaded: 'bg-red-500',
-}
-
 // Мини-виджет личной загрузки под профилем в сайдбаре
 export default function PersonalWorkload() {
-  const { active, max, percent, loadState } = usePersonalWorkload()
+  const { active, queued, max, percent, loadState } = usePersonalWorkload()
+  const state = LOAD_STATE[loadState] ?? LOAD_STATE.normal
   const overloaded = loadState === 'overloaded'
   const width = Math.min(100, percent)
 
@@ -27,20 +21,21 @@ export default function PersonalWorkload() {
             'flex items-center gap-1 font-medium',
             overloaded ? 'text-red-400' : 'text-muted'
           )}
-          style={overloaded ? undefined : { color: LOAD_STATE[loadState]?.color }}
+          style={overloaded ? undefined : { color: state.color }}
         >
           {overloaded && <AlertTriangle className="h-3 w-3" />}
-          {LOAD_STATE[loadState]?.label}
+          {state.label}
         </span>
         <span className="text-muted">
-          {active} из {max} задач
+          {active} из {max}
+          {queued > 0 && ` · ${queued} в очереди`}
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-line">
         <div
           className={cn(
             'h-full rounded-full transition-all',
-            BAR_COLOR[loadState] ?? 'bg-slate-500'
+            state.bar
           )}
           style={{ width: `${width}%` }}
         />

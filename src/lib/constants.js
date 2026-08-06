@@ -140,26 +140,44 @@ export const DEADLINE_STATE = {
   },
 }
 
-// Уровень загрузки сотрудника (из employee_workload.load_state)
+// Уровень загрузки сотрудника (из employee_workload.load_state).
+// Три уровня вместо четырёх: пока человек в пределах лимита — он «в норме»,
+// и незачем красить это в разные цвета. Красный означает настоящий перегруз.
 export const LOAD_STATE = {
-  free: {
-    label: 'Свободен',
-    color: '#22c55e',
-    badge: 'bg-green-100 text-green-700',
-  },
   normal: {
-    label: 'Норма',
+    label: 'В норме',
     color: '#2bbaac',
+    bar: 'bg-[#2bbaac]',
     badge: 'bg-[#2bbaac]/15 text-[#2bbaac]',
   },
-  busy: {
-    label: 'Занят',
-    color: '#f59e0b',
-    badge: 'bg-amber-100 text-amber-700',
+  high: {
+    label: 'Высокая загрузка',
+    color: '#ecc371',
+    bar: 'bg-[#ecc371]',
+    badge: 'bg-[#ecc371]/15 text-[#ecc371]',
   },
   overloaded: {
     label: 'Перегружен',
     color: '#ef4444',
-    badge: 'bg-red-100 text-red-700',
+    bar: 'bg-red-500',
+    badge: 'bg-red-500/15 text-red-400',
   },
+}
+
+// Лимит одновременных задач по умолчанию (profiles.work_limit)
+export const DEFAULT_WORK_LIMIT = 15
+
+// Уровень по проценту загрузки — та же граница, что в employee_workload
+export function loadStateFor(percent, limit) {
+  if (!limit) return 'normal'
+  if (percent <= 100) return 'normal'
+  if (percent <= 150) return 'high'
+  return 'overloaded'
+}
+
+// Задача нагружает исполнителя, только если она уже в работе:
+// не в начальном статусе (это очередь) и не в финальном.
+export function isInWork(status) {
+  if (!status) return false
+  return !status.is_initial && !status.is_final
 }

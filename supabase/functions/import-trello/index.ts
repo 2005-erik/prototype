@@ -2,6 +2,28 @@ import { corsHeaders, json, requireAdmin } from '../_shared/utils.ts'
 
 type Any = Record<string, unknown>
 
+// Палитра меток Trello → hex. Trello отдаёт название цвета
+// ('green', 'sky_dark'), в базе храним готовый hex.
+const TRELLO_COLORS: Record<string, string> = {
+  green: '#61bd4f',
+  yellow: '#f2d600',
+  orange: '#ff9f1a',
+  red: '#eb5a46',
+  purple: '#c377e0',
+  blue: '#0079bf',
+  sky: '#00c2e0',
+  lime: '#51e898',
+  pink: '#ff80ce',
+  black: '#344563',
+}
+
+// 'sky_dark' → базовый цвет 'sky'; неизвестное — бирюзовый бренда
+function labelColor(raw: unknown): string {
+  const name = String(raw ?? '').toLowerCase()
+  const base = name.split('_')[0]
+  return TRELLO_COLORS[base] ?? '#2bbaac'
+}
+
 // Границы допустимых дат: Trello отдаёт даты строками, мусор в timestamptz
 // пускать нельзя (упадёт вся транзакция импорта).
 const MIN_TS = Date.UTC(1990, 0, 1)
@@ -113,6 +135,27 @@ Deno.serve(async (req: Request) => {
     return { ...base, status_code: l.value }
   })
 
+  // ---- Метки доски → теги проекта ----
+  // Единственная классификация по направлениям: раньше уезжала текстом
+  // в описание, теперь становится тегами.
+  const outLabels: Any[] = []
+  const labelIds = new Set<string>()
+  const addLabel = (l: Any) => {
+    const id = String(l.id ?? '')
+    if (!id || labelIds.has(id)) return
+    const rawName = String(l.name ?? '').trim()
+    // У безымянной метки именем становится её цвет
+    const name = rawName || String(l.color ?? '').trim() || 'Без названия'
+    outLabels.push({ trello_id: id, name, color: labelColor(l.color) })
+    labelIds.add(id)
+  }
+  for (const l of ((trello.labels as Any[]) ?? [])) addLabel(l)
+  // Не в каждом экспорте есть массив labels на уровне доски —
+  // добираем метки из самих карточек
+  for (const c of ((trello.cards as Any[]) ?? [])) {
+    for (const l of ((c.labels as Any[]) ?? [])) addLabel(l)
+  }
+
   const outMembers = memberMap.map((m) => ({
     trello_id: String(m.trello_id),
     profile_id: m.profile_id ?? null,
@@ -134,12 +177,9 @@ Deno.serve(async (req: Request) => {
       continue
     }
 
-    // Описание + метки + вложения (файлы остаются в Trello)
+    // Описание + вложения (файлы остаются в Trello).
+    // Метки в описание больше не дописываем — они уходят в теги.
     let desc = String(c.desc ?? '')
-    const labels = ((c.labels as Any[]) ?? [])
-      .map((l) => String(l.name ?? '').trim())
-      .filter(Boolean)
-    if (labels.length) desc += `\n\nМетки Trello: ${labels.join(', ')}`
 
     const atts = ((c.attachments as Any[]) ?? []).filter((a) => a.url)
     if (atts.length) {
@@ -159,6 +199,11 @@ Deno.serve(async (req: Request) => {
       due_date: safeTimestamp(c.due),
       due_complete: !!c.dueComplete,
       assignee_trello_id: idMembers.length ? idMembers[0] : null,
+      // метки карточки: idLabels, а если их нет — inline-массив labels
+      tag_trello_ids: (Array.isArray(c.idLabels)
+        ? (c.idLabels as unknown[]).map(String)
+        : ((c.labels as Any[]) ?? []).map((l) => String(l.id ?? ''))
+      ).filter((id) => labelIds.has(id)),
       // tasks.position — numeric, большие значения pos из Trello выдерживает,
       // поэтому пишем как есть (нормализация нужна только int-колонкам)
       position: trelloNumber(c.pos),
@@ -247,6 +292,7 @@ Deno.serve(async (req: Request) => {
       options,
       lists: outLists,
       members: outMembers,
+      labels: outLabels,
       tasks,
       checklists,
       comments,

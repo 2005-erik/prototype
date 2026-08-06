@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { purgeStorageSoon } from '../lib/storageCleanup'
+import { DEFAULT_WORK_LIMIT, loadStateFor } from '../lib/constants'
 
 // ---------------------------------------------------------------------
 // useProjects — список проектов текущего пользователя
@@ -437,13 +438,7 @@ export function useProjectStatusesMap(projectIds) {
 }
 
 // Состояние личной загрузки по проценту
-function personalLoadState(percent, max) {
-  if (!max) return 'normal'
-  if (percent < 50) return 'free'
-  if (percent < 80) return 'normal'
-  if (percent <= 100) return 'busy'
-  return 'overloaded'
-}
+
 
 // ---------------------------------------------------------------------
 // usePersonalWorkload — суммарная загрузка текущего пользователя
@@ -452,9 +447,9 @@ function personalLoadState(percent, max) {
 export function usePersonalWorkload() {
   const { user, profile } = useAuth()
   const userId = user?.id ?? null
-  const max = profile?.max_concurrent_tasks ?? 10
+  const max = profile?.work_limit ?? DEFAULT_WORK_LIMIT
 
-  const [totals, setTotals] = useState({ active: 0, overdue: 0 })
+  const [totals, setTotals] = useState({ active: 0, queued: 0, overdue: 0 })
   const mountedRef = useRef(true)
 
   const fetchWorkload = useCallback(async () => {
@@ -462,16 +457,18 @@ export function usePersonalWorkload() {
     try {
       const { data, error } = await supabase
         .from('employee_workload')
-        .select('active_tasks, overdue_tasks')
+        .select('active_tasks, queued_tasks, overdue_tasks')
         .eq('user_id', userId)
       if (error) throw error
       let active = 0
+      let queued = 0
       let overdue = 0
       for (const r of data ?? []) {
         active += r.active_tasks ?? 0
+        queued += r.queued_tasks ?? 0
         overdue += r.overdue_tasks ?? 0
       }
-      if (mountedRef.current) setTotals({ active, overdue })
+      if (mountedRef.current) setTotals({ active, queued, overdue })
     } catch {
       /* тихо игнорируем — виджет не критичен */
     }
@@ -503,10 +500,11 @@ export function usePersonalWorkload() {
   }, [userId, fetchWorkload])
 
   const percent = max > 0 ? Math.round((totals.active * 100) / max) : 0
-  const loadState = personalLoadState(percent, max)
+  const loadState = loadStateFor(percent, max)
 
   return {
     active: totals.active,
+    queued: totals.queued,
     overdue: totals.overdue,
     max,
     percent,

@@ -13,6 +13,7 @@ import { PRIORITY } from '../../lib/constants'
 import { formatDeadline, cn } from '../../lib/utils'
 import Avatar from '../ui/Avatar'
 import PriorityChip from '../ui/PriorityChip'
+import TagChip from '../ui/TagChip'
 
 // Цвет текста строки со сроком по состоянию дедлайна
 const DEADLINE_TEXT = {
@@ -23,7 +24,7 @@ const DEADLINE_TEXT = {
 
 // Карточка задачи на канбан-доске.
 // onOpen(task) — открытие TaskDrawer (без перехода на страницу).
-export default function TaskCard({ task, onOpen, onContextMenu, overlay = false }) {
+export default function TaskCard({ task, tags = [], onOpen, onContextMenu, overlay = false }) {
   const { user, isEmployee } = useAuth()
 
   // Сотрудник может тащить только свои задачи; остальные — нет
@@ -86,6 +87,18 @@ export default function TaskCard({ task, onOpen, onContextMenu, overlay = false 
 
       {/* Заголовок — максимум 2 строки */}
       <p className="line-clamp-2 text-sm text-fg">{task.title}</p>
+
+      {/* Направления работы */}
+      {tags.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {tags.slice(0, 3).map((tag) => (
+            <TagChip key={tag.id} tag={tag} size="xs" />
+          ))}
+          {tags.length > 3 && (
+            <span className="text-[10px] text-muted">+{tags.length - 3}</span>
+          )}
+        </div>
+      )}
 
       {/* Срок + индикатор застоя */}
       {(task.due_date || task.is_stale) && (
