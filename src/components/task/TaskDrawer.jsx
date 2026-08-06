@@ -50,6 +50,7 @@ function FileTypeIcon({ mime, className }) {
 // Иконка и подпись для записи истории
 const ACTIVITY_ICON = {
   created: Plus,
+  imported: Download,
   status_changed: ArrowRightLeft,
   assigned: UserPlus,
   due_changed: CalendarClock,
@@ -57,6 +58,7 @@ const ACTIVITY_ICON = {
 }
 const ACTIVITY_LABEL = {
   created: 'создал(а) задачу',
+  imported: 'импортировал(а) задачу из Trello',
   assigned: 'сменил(а) исполнителя',
   due_changed: 'изменил(а) срок',
   priority_changed: 'изменил(а) приоритет',

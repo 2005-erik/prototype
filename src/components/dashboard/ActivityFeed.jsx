@@ -1,5 +1,6 @@
 import {
   Plus,
+  Download,
   ArrowRightLeft,
   UserPlus,
   CalendarClock,
@@ -13,6 +14,7 @@ import { formatRelative } from '../../lib/utils'
 
 const ICON = {
   created: Plus,
+  imported: Download,
   status_changed: ArrowRightLeft,
   assigned: UserPlus,
   due_changed: CalendarClock,
@@ -26,6 +28,8 @@ function describe(a) {
   switch (a.action) {
     case 'created':
       return `${who} создал(а) ${num}`
+    case 'imported':
+      return `${who} импортировал(а) ${num} из Trello`
     case 'status_changed':
       return `${who} перевёл(а) ${num} в «${a.new_value ?? '—'}»`
     case 'assigned':
