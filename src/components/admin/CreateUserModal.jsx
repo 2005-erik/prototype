@@ -14,6 +14,7 @@ import Modal from '../ui/Modal'
 import Input from '../ui/Input'
 import Button from '../ui/Button'
 import { useToast } from '../ui/Toast'
+import ProjectPicker, { projectsRequiredFor } from './ProjectPicker'
 import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../../lib/constants'
 import { cn } from '../../lib/utils'
 
@@ -172,6 +173,9 @@ function SingleTab({
       ? `Минимум ${MIN_PASSWORD} символов`
       : null
 
+  // manager/employee без проекта не увидит ни одной задачи — блокируем создание
+  const needsProject = projectsRequiredFor(role) && projectIds.size === 0
+
   const toggleProject = (id) =>
     setProjectIds((prev) => {
       const next = new Set(prev)
@@ -193,6 +197,8 @@ function SingleTab({
       setPwTouched(true)
       return toast.error(`Пароль минимум ${MIN_PASSWORD} символов`)
     }
+    if (needsProject)
+      return toast.error('Выберите хотя бы один проект для сотрудника')
     setBusy(true)
     const { error } = await onCreate({
       email: email.trim(),
@@ -338,39 +344,19 @@ function SingleTab({
         </div>
 
         {/* Проекты */}
-        <div>
-          <label className="mb-1 block text-xs font-medium uppercase text-muted">
-            Проекты
-          </label>
-          {projects.length === 0 ? (
-            <p className="text-sm text-muted/60">Нет проектов</p>
-          ) : (
-            <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-line bg-app p-2">
-              {projects.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm text-fg hover:bg-line"
-                >
-                  <input
-                    type="checkbox"
-                    checked={projectIds.has(p.id)}
-                    onChange={() => toggleProject(p.id)}
-                    className="accent-blue-600"
-                  />
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color ?? '#2563eb' }} />
-                  {p.name}
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
+        <ProjectPicker
+          projects={projects}
+          selected={projectIds}
+          onToggle={toggleProject}
+          role={role}
+        />
       </div>
 
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose} disabled={busy}>
           Отмена
         </Button>
-        <Button onClick={submit} loading={busy}>
+        <Button onClick={submit} loading={busy} disabled={needsProject}>
           Создать
         </Button>
       </div>
@@ -379,18 +365,31 @@ function SingleTab({
 }
 
 // ---- Вкладка импорта ----
-function ImportTab({ onCreate }) {
+function ImportTab({ projects, onCreate }) {
   const { toast } = useToast()
   const [raw, setRaw] = useState('')
+  const [projectIds, setProjectIds] = useState(() => new Set())
   const [progress, setProgress] = useState(null) // { done, total }
   const [result, setResult] = useState(null) // { created[], failed[], invalidCount }
 
   const rows = useMemo(() => parseImport(raw), [raw])
   const validCount = rows.filter((r) => r.valid).length
 
+  // Если среди строк есть manager/employee — проекты обязательны для всех
+  const needsProject =
+    rows.some((r) => r.valid && projectsRequiredFor(r.role)) && projectIds.size === 0
+
+  const toggleProject = (id) =>
+    setProjectIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
   const createAll = async () => {
     const valid = rows.filter((r) => r.valid)
-    if (valid.length === 0) return
+    if (valid.length === 0 || needsProject) return
     setResult(null)
     setProgress({ done: 0, total: valid.length })
     const createdRows = []
@@ -404,7 +403,7 @@ function ImportTab({ onCreate }) {
         position: r.position,
         department: null,
         role: r.role,
-        project_ids: [],
+        project_ids: [...projectIds],
       })
       if (error) failed.push({ email: r.email, error })
       else createdRows.push({ email: r.email, full_name: r.full_name, password })
@@ -457,6 +456,21 @@ function ImportTab({ onCreate }) {
           className="w-full resize-y rounded-lg border border-line bg-app p-2.5 font-mono text-xs text-fg placeholder-muted outline-none focus:border-accent"
         />
       </div>
+
+      {/* Проекты — общие для всех импортируемых строк */}
+      {!result && (
+        <ProjectPicker
+          projects={projects}
+          selected={projectIds}
+          onToggle={toggleProject}
+          role={
+            rows.some((r) => r.valid && projectsRequiredFor(r.role))
+              ? 'employee'
+              : 'admin'
+          }
+          label="Проекты для всех импортируемых"
+        />
+      )}
 
       {/* Предпросмотр (до создания) */}
       {rows.length > 0 && !result && (
@@ -589,7 +603,11 @@ function ImportTab({ onCreate }) {
           </Button>
         )}
         {!result && (
-          <Button onClick={createAll} loading={importing} disabled={validCount === 0}>
+          <Button
+            onClick={createAll}
+            loading={importing}
+            disabled={validCount === 0 || needsProject}
+          >
             Создать всех ({validCount})
           </Button>
         )}
@@ -645,7 +663,7 @@ export default function CreateUserModal({ projects = [], onCreate, onClose }) {
           setPassword={setPassword}
         />
       ) : (
-        <ImportTab onCreate={onCreate} />
+        <ImportTab projects={projects} onCreate={onCreate} />
       )}
     </Modal>
   )

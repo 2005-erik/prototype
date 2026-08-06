@@ -8,6 +8,7 @@ import {
   FolderKanban,
   UserX,
   UserCheck,
+  AlertTriangle,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useUserAdmin } from '../hooks/useUserAdmin'
@@ -15,6 +16,7 @@ import { useProjects } from '../hooks/useProjects'
 import { ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS } from '../lib/constants'
 import { formatRelative, cn } from '../lib/utils'
 import Button from '../components/ui/Button'
+import Badge from '../components/ui/Badge'
 import Select from '../components/ui/Select'
 import Avatar from '../components/ui/Avatar'
 import Skeleton from '../components/ui/Skeleton'
@@ -120,6 +122,7 @@ export default function UsersAdminPage() {
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [deptFilter, setDeptFilter] = useState('')
+  const [projectFilter, setProjectFilter] = useState('') // '' | 'none'
 
   // Модалки/диалоги
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -148,6 +151,7 @@ export default function UsersAdminPage() {
         return false
       if (roleFilter && u.role !== roleFilter) return false
       if (deptFilter && u.department !== deptFilter) return false
+      if (projectFilter === 'none' && (u.projects ?? []).length > 0) return false
       if (statusFilter === 'active' && !u.is_active) return false
       if (statusFilter === 'inactive' && u.is_active) return false
       if (
@@ -157,7 +161,15 @@ export default function UsersAdminPage() {
         return false
       return true
     })
-  }, [users, search, roleFilter, deptFilter, statusFilter])
+  }, [users, search, roleFilter, deptFilter, statusFilter, projectFilter])
+
+  // Сотрудники (не admin) без единого проекта — им не видны задачи
+  const orphanCount = useMemo(
+    () =>
+      users.filter((u) => u.role !== 'admin' && (u.projects ?? []).length === 0)
+        .length,
+    [users]
+  )
 
   // ---- Обработчики ----
   const onRoleSelect = (u, newRole) => {
@@ -197,10 +209,9 @@ export default function UsersAdminPage() {
     if (!res.error) logAdminAction('user_edited', editUser.id, patch)
     return res
   }
-  const handleProjectsSave = async (ids) => {
-    const res = await setUserProjects(projectsUser.id, ids)
-    if (!res.error)
-      logAdminAction('projects_changed', projectsUser.id, { count: ids.length })
+  const saveProjectsFor = (userId) => async (ids) => {
+    const res = await setUserProjects(userId, ids)
+    if (!res.error) logAdminAction('projects_changed', userId, { count: ids.length })
     return res
   }
 
@@ -293,11 +304,38 @@ export default function UsersAdminPage() {
           ]}
           className="w-40"
         />
+        <Select
+          value={projectFilter}
+          onChange={(e) => setProjectFilter(e.target.value)}
+          options={[
+            { value: '', label: 'С проектами и без' },
+            { value: 'none', label: 'Без проекта' },
+          ]}
+          className="w-44"
+        />
         <Button size="sm" className="ml-auto" onClick={() => setInviteOpen(true)}>
           <Plus className="h-4 w-4" />
           Добавить сотрудника
         </Button>
       </div>
+
+      {/* Сотрудники, потерянные вне проектов */}
+      {orphanCount > 0 && projectFilter !== 'none' && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            Без проекта: {orphanCount}. Такие сотрудники не видят ни доски, ни
+            задач и не появляются в списках исполнителей.
+          </span>
+          <button
+            type="button"
+            onClick={() => setProjectFilter('none')}
+            className="font-medium underline underline-offset-2"
+          >
+            Показать
+          </button>
+        </div>
+      )}
 
       {/* Таблица */}
       {loading && users.length === 0 ? (
@@ -355,12 +393,28 @@ export default function UsersAdminPage() {
                       </select>
                     </td>
                     <td className="px-3 py-2">
-                      <span
-                        className="text-muted"
-                        title={(u.projects ?? []).map((p) => p.name).join(', ')}
-                      >
-                        {(u.projects ?? []).length}
-                      </span>
+                      {(u.projects ?? []).length === 0 ? (
+                        <span className="flex items-center gap-2">
+                          <Badge tone="amber">Без проекта</Badge>
+                          <button
+                            type="button"
+                            onClick={() => setProjectsUser(u)}
+                            className="flex items-center gap-0.5 text-xs font-medium text-accent transition hover:underline"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Добавить
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setProjectsUser(u)}
+                          title={(u.projects ?? []).map((p) => p.name).join(', ')}
+                          className="text-muted transition hover:text-fg hover:underline"
+                        >
+                          {(u.projects ?? []).length}
+                        </button>
+                      )}
                     </td>
                     <td className="px-3 py-2">
                       <span className={cn('text-xs font-medium', st.cls)}>
@@ -399,7 +453,9 @@ export default function UsersAdminPage() {
       {editUser && (
         <EditUserModal
           user={editUser}
+          projects={projects}
           onSave={handleEditSave}
+          onSaveProjects={saveProjectsFor(editUser.id)}
           onClose={() => setEditUser(null)}
         />
       )}
@@ -407,7 +463,7 @@ export default function UsersAdminPage() {
         <ManageProjectsModal
           user={projectsUser}
           projects={projects}
-          onSave={handleProjectsSave}
+          onSave={saveProjectsFor(projectsUser.id)}
           onClose={() => setProjectsUser(null)}
         />
       )}

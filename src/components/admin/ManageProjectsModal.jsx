@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import { useToast } from '../ui/Toast'
+import ProjectPicker, { projectsRequiredFor } from './ProjectPicker'
 
 export default function ManageProjectsModal({ user, projects = [], onSave, onClose }) {
   const { toast } = useToast()
@@ -9,6 +10,8 @@ export default function ManageProjectsModal({ user, projects = [], onSave, onClo
     () => new Set((user.projects ?? []).map((p) => p.id))
   )
   const [busy, setBusy] = useState(false)
+
+  const needsProject = projectsRequiredFor(user.role) && selected.size === 0
 
   const toggle = (id) => {
     setSelected((prev) => {
@@ -20,6 +23,8 @@ export default function ManageProjectsModal({ user, projects = [], onSave, onClo
   }
 
   const submit = async () => {
+    if (needsProject)
+      return toast.error('Выберите хотя бы один проект для сотрудника')
     setBusy(true)
     const { error } = await onSave([...selected])
     setBusy(false)
@@ -42,36 +47,19 @@ export default function ManageProjectsModal({ user, projects = [], onSave, onClo
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             Отмена
           </Button>
-          <Button onClick={submit} loading={busy}>
+          <Button onClick={submit} loading={busy} disabled={needsProject}>
             Сохранить
           </Button>
         </>
       }
     >
-      {projects.length === 0 ? (
-        <p className="text-sm text-muted/60">Нет проектов</p>
-      ) : (
-        <div className="max-h-72 space-y-1 overflow-y-auto">
-          {projects.map((p) => (
-            <label
-              key={p.id}
-              className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-fg hover:bg-line"
-            >
-              <input
-                type="checkbox"
-                checked={selected.has(p.id)}
-                onChange={() => toggle(p.id)}
-                className="accent-blue-600"
-              />
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: p.color ?? '#2563eb' }}
-              />
-              {p.name}
-            </label>
-          ))}
-        </div>
-      )}
+      <ProjectPicker
+        projects={projects}
+        selected={selected}
+        onToggle={toggle}
+        role={user.role}
+        label="Состав проектов"
+      />
     </Modal>
   )
 }
