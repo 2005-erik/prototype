@@ -17,6 +17,7 @@ import TrelloImportPage from './pages/TrelloImportPage'
 import AuthLogPage from './pages/AuthLogPage'
 import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
+import { OfflineNotice, UpdateBanner } from './components/layout/PwaBanners'
 
 // Роли для доски/аналитики/команды
 const MANAGERS = ['admin', 'manager']
@@ -24,6 +25,10 @@ const MANAGERS = ['admin', 'manager']
 function App() {
   return (
     <BrowserRouter>
+      {/* PWA-плашки вне маршрутов: обновление и потеря сети касаются
+          и экрана входа, где каркаса приложения ещё нет */}
+      <UpdateBanner />
+      <OfflineNotice />
       <Routes>
         {/* Публичный маршрут */}
         <Route path="/login" element={<LoginPage />} />

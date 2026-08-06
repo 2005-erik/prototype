@@ -87,6 +87,8 @@ export default function BoardPage() {
   const [priority, setPriority] = useState(null)
   const [assignees, setAssignees] = useState(() => new Set())
   const [tagIds, setTagIds] = useState(() => new Set())
+  // Модалка создания задачи (может открываться ярлыком PWA)
+  const [createOpen, setCreateOpen] = useState(false)
   const [showCompleted, setShowCompleted] = useState(false)
   // Спецфильтр из URL (переход с дашборда): overdue | today | stale
   const [special, setSpecial] = useState(null)
@@ -105,6 +107,8 @@ export default function BoardPage() {
     if (p && PRIORITY[p]) setPriority(p)
     const tg = searchParams.get('tags')
     if (tg) setTagIds(new Set(tg.split(',').filter(Boolean)))
+    // ?new=1 — ярлык «Новая задача» из установленного приложения
+    if (searchParams.get('new') === '1') setCreateOpen(true)
   }, [searchParams])
 
   // debounce поиска 300мс
@@ -200,8 +204,6 @@ export default function BoardPage() {
   // ---- Открытие задачи в боковой панели ----
   const [openTask, setOpenTask] = useState(null)
 
-  // ---- Модалка создания задачи ----
-  const [createOpen, setCreateOpen] = useState(false)
 
   // ---- Быстрая смена приоритета (правый клик по карточке) ----
   const [prioMenu, setPrioMenu] = useState(null) // { task, x, y }

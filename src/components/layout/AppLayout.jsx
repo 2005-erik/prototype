@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   Menu,
   X,
+  Download,
   ChevronRight,
   ChevronDown,
   ArrowRightLeft,
@@ -33,6 +34,8 @@ import { supabase } from '../../lib/supabase'
 import { getInitials, cn } from '../../lib/utils'
 import { useToast } from '../ui/Toast'
 import PersonalWorkload from './PersonalWorkload'
+import { IosInstallHint } from './PwaBanners'
+import { useInstallPrompt } from '../../hooks/usePwa'
 
 // Иконка уведомления по типу
 const NOTIF_ICON = {
@@ -273,6 +276,10 @@ export default function AppLayout() {
   // Выдвижное меню на узком экране
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
+  // Установка приложения
+  const { canInstall, iosHint, install } = useInstallPrompt()
+  const [iosHintOpen, setIosHintOpen] = useState(false)
+
   // Переход по ссылке закрывает меню — иначе панель остаётся поверх контента
   useEffect(() => {
     setMobileNavOpen(false)
@@ -507,6 +514,20 @@ export default function AppLayout() {
           {/* Личная загрузка */}
           {!collapsed && <PersonalWorkload />}
 
+          {(canInstall || iosHint) && (
+            <button
+              type="button"
+              onClick={() => (canInstall ? install() : setIosHintOpen(true))}
+              className={`mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-accent transition hover:bg-line ${
+                collapsed ? 'justify-center' : ''
+              }`}
+              title={collapsed ? 'Установить приложение' : undefined}
+            >
+              <Download className="h-5 w-5 flex-shrink-0" />
+              {!collapsed && <span>Установить приложение</span>}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={signOut}
@@ -542,6 +563,9 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Подсказка про установку на iPhone */}
+      <IosInstallHint open={iosHintOpen} onClose={() => setIosHintOpen(false)} />
     </div>
   )
 }
