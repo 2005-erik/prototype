@@ -46,7 +46,9 @@ export default function MemberTasksDrawer({
           <span className="min-w-0">
             <span className="block truncate">{column.profile?.full_name}</span>
             <span className="block text-xs font-normal text-muted">
-              {load ? `${load.active} в работе · ${load.queued} в очереди` : `${tasks.length} задач`}
+              {load
+                ? `${load.active} в работе${load.review ? ` · ${load.review} на проверке` : ''} · ${load.queued} в очереди`
+                : `${tasks.length} задач`}
               {load ? ` · ${LOAD_STATE[load.load_state]?.label}` : ''}
               {load?.overdue > 0 ? ` · ${load.overdue} просрочено` : ''}
             </span>

@@ -175,9 +175,16 @@ export function loadStateFor(percent, limit) {
   return 'overloaded'
 }
 
-// Задача нагружает исполнителя, только если она уже в работе:
-// не в начальном статусе (это очередь) и не в финальном.
+// Задача нагружает исполнителя, только если она в работе:
+// не в очереди (начальный статус), не завершена и не ждёт другого
+// (loads_assignee = false — например, «На проверке»).
 export function isInWork(status) {
   if (!status) return false
-  return !status.is_initial && !status.is_final
+  return !status.is_initial && !status.is_final && status.loads_assignee !== false
+}
+
+// Сдано и ждёт проверяющего: не очередь, не финал, но не нагружает
+export function isAwaitingReview(status) {
+  if (!status) return false
+  return !status.is_initial && !status.is_final && status.loads_assignee === false
 }

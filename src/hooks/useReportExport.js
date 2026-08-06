@@ -105,6 +105,7 @@ export function useReportExport() {
         const workRows = workload.map((w) => ({
           Сотрудник: w.full_name,
           'В работе': w.active_tasks,
+          'На проверке': w.review_tasks,
           'В очереди': w.queued_tasks,
           Лимит: w.work_limit,
           Просрочено: w.overdue_tasks,

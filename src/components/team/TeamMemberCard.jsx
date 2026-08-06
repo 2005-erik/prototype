@@ -59,8 +59,9 @@ export function TeamMemberCard({ column, onOpen }) {
 
       {/* Сводка вместо списка */}
       <p className="mt-2 text-xs text-muted">
-        <span className="font-medium text-fg">{load.active} в работе</span> ·{' '}
-        {load.queued} в очереди
+        <span className="font-medium text-fg">{load.active} в работе</span>
+        {load.review > 0 && ` · ${load.review} на проверке`} · {load.queued} в
+        очереди
         <span className="text-muted/60">
           {' '}
           · лимит {load.work_limit}

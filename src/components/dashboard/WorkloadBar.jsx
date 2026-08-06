@@ -20,6 +20,7 @@ export default function WorkloadBar({ row, profile, onSelect }) {
           <span className="truncate text-sm text-fg">{row.full_name}</span>
           <span className="flex-shrink-0 text-xs text-muted">
             {row.active_tasks} / {row.work_limit} в работе
+            {row.review_tasks > 0 && ` · ${row.review_tasks} на проверке`}
             {row.queued_tasks > 0 && ` · ${row.queued_tasks} в очереди`}
           </span>
         </div>

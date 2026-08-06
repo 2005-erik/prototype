@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import { DEFAULT_WORK_LIMIT, loadStateFor, isInWork } from '../lib/constants'
+import {
+  DEFAULT_WORK_LIMIT,
+  loadStateFor,
+  isInWork,
+  isAwaitingReview,
+} from '../lib/constants'
 
 const URGENCY = {
   overdue: 0,
@@ -32,7 +37,8 @@ function sortByUrgency(tasks) {
 // она видна отдельным числом и в процент не входит.
 function computeLoad(tasks, workLimit, statusById) {
   const inWork = tasks.filter((t) => isInWork(statusById[t.status_id]))
-  const queued = tasks.length - inWork.length
+  const review = tasks.filter((t) => isAwaitingReview(statusById[t.status_id]))
+  const queued = tasks.length - inWork.length - review.length
   const overdue = tasks.filter((t) => t.deadline_state === 'overdue').length
   const today = tasks.filter(
     (t) => t.deadline_state !== 'overdue' && isToday(t.due_date)
@@ -43,6 +49,7 @@ function computeLoad(tasks, workLimit, statusById) {
   const percent = limit > 0 ? Math.round((inWork.length * 100) / limit) : 0
   return {
     active: inWork.length,
+    review: review.length,
     queued,
     total: tasks.length,
     overdue,
@@ -83,7 +90,7 @@ export function useTeam(projectId) {
 
       let sQuery = supabase
         .from('statuses')
-        .select('id, is_initial, is_final')
+        .select('id, is_initial, is_final, loads_assignee')
       if (projectId) sQuery = sQuery.eq('project_id', projectId)
 
       const [mRes, tRes, sRes] = await Promise.all([mQuery, tQuery, sQuery])

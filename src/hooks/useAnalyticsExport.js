@@ -105,6 +105,7 @@ export function useAnalyticsExport() {
           '% в срок': e.on_time_percent == null ? '—' : fmtPct(e.on_time_percent),
           'Ср. возврат': e.avg_rework,
           'В работе': e.active_tasks,
+          'На проверке': e.review_tasks,
           'В очереди': e.queued_tasks,
           Просрочено: e.overdue_tasks,
           'Загрузка, %': fmtPct(e.load_percent),

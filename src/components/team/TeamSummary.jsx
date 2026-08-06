@@ -1,6 +1,6 @@
 import { cn } from '../../lib/utils'
 
-// totals: { active, queued, high, overloaded, unassigned, overdue }
+// totals: { active, review, queued, high, overloaded, unassigned, overdue }
 export default function TeamSummary({ totals, filter, onFilter }) {
   const chip = (key, label, value, danger, filterable = true) => (
     <button
@@ -22,6 +22,7 @@ export default function TeamSummary({ totals, filter, onFilter }) {
   return (
     <div className="flex flex-wrap gap-2">
       {chip('active', 'в работе', totals.active)}
+      {chip('review', 'на проверке', totals.review, false, false)}
       {chip('queued', 'в очереди', totals.queued, false, false)}
       {chip('high', 'высокая загрузка', totals.high)}
       {chip('overloaded', 'перегружено', totals.overloaded, true)}

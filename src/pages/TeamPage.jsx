@@ -75,6 +75,7 @@ export default function TeamPage() {
     () => ({
       // «активных» — именно в работе, а не всё незакрытое
       active: columns.reduce((sum, c) => sum + c.load.active, 0),
+      review: columns.reduce((sum, c) => sum + c.load.review, 0),
       queued: columns.reduce((sum, c) => sum + c.load.queued, 0),
       high: columns.filter((c) => c.load.load_state === 'high').length,
       overloaded: columns.filter((c) => c.load.load_state === 'overloaded').length,
