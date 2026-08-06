@@ -3,6 +3,7 @@ import { Users } from 'lucide-react'
 import { useEmployeeStats } from '../../hooks/useAnalytics'
 import Skeleton from '../ui/Skeleton'
 import EmptyState from '../ui/EmptyState'
+import CollapsibleSection from '../ui/CollapsibleSection'
 import EmployeeTable from './EmployeeTable'
 import ComparisonRadar from './ComparisonRadar'
 
@@ -46,14 +47,18 @@ export default function EmployeesTab({ projectId, period }) {
       />
 
       {/* Радар сравнения */}
-      <section className="rounded-lg border border-line bg-surface p-4">
-        <h3 className="mb-1 text-sm font-semibold text-fg">Сравнение</h3>
+      <CollapsibleSection
+        id="analytics.employees.radar"
+        title="Сравнение"
+        count={selectedRows.length}
+        defaultOpen={false}
+      >
         <p className="mb-3 text-xs text-muted">
           Отметьте до 4 сотрудников в таблице. Значения нормированы 0–100
           относительно выбранных.
         </p>
         <ComparisonRadar employees={selectedRows} />
-      </section>
+      </CollapsibleSection>
     </div>
   )
 }

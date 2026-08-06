@@ -18,6 +18,7 @@ import Select from '../components/ui/Select'
 import Button from '../components/ui/Button'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
+import CollapsibleSection from '../components/ui/CollapsibleSection'
 import { useToast } from '../components/ui/Toast'
 import { cn } from '../lib/utils'
 import MetricCard from '../components/dashboard/MetricCard'
@@ -239,10 +240,12 @@ export default function ManagerDashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Левая (2/3) */}
         <div className="space-y-6 lg:col-span-2">
-          <section className="rounded-lg border border-line bg-surface p-4">
-            <h3 className="mb-3 text-sm font-semibold text-fg">
-              Загрузка команды
-            </h3>
+          <CollapsibleSection
+            id="dashboard.workload"
+            title="Загрузка команды"
+            count={(dash?.workload ?? []).length}
+            defaultOpen
+          >
             {(dash?.workload ?? []).length === 0 ? (
               <EmptyState icon={Users} title="Нет данных о загрузке" />
             ) : (
@@ -261,43 +264,49 @@ export default function ManagerDashboard() {
                   ))}
               </div>
             )}
-          </section>
+          </CollapsibleSection>
 
-          <section className="rounded-lg border border-line bg-surface p-4">
-            <h3 className="mb-3 text-sm font-semibold text-fg">
-              Распределение по статусам
-            </h3>
+          <CollapsibleSection
+            id="dashboard.statuses"
+            title="Распределение по статусам"
+            count={(dash?.tasks_by_status ?? []).length}
+            defaultOpen={false}
+          >
             <StatusDistribution
               data={dash?.tasks_by_status ?? []}
               onSelect={() => goBoard('')}
             />
-          </section>
+          </CollapsibleSection>
         </div>
 
         {/* Правая (1/3) */}
         <div className="space-y-6">
-          <section className="rounded-lg border border-line bg-surface p-4">
-            <h3 className="mb-3 text-sm font-semibold text-fg">
-              Требует внимания
-            </h3>
+          <CollapsibleSection
+            id="dashboard.attention"
+            title="Требует внимания"
+            count={metrics.overdue + metrics.dueToday + metrics.stale}
+            defaultOpen={false}
+          >
             {tasksLoading && tasks.length === 0 ? (
               <Skeleton className="h-32 w-full" />
             ) : (
               <AttentionList tasks={tasks} onOpen={setOpenTask} />
             )}
-          </section>
+          </CollapsibleSection>
 
-          <section className="rounded-lg border border-line bg-surface p-4">
-            <h3 className="mb-3 text-sm font-semibold text-fg">
-              Лента активности
-            </h3>
+          <CollapsibleSection
+            id="dashboard.activity"
+            title="Лента активности"
+            count={activity.length}
+            defaultOpen={false}
+          >
             <ActivityFeed
               items={activity}
               loading={activityLoading}
               canShowMore={activity.length >= feedLimit}
               onShowMore={() => setFeedLimit((n) => n + 20)}
             />
-          </section>
+          </CollapsibleSection>
         </div>
       </div>
 

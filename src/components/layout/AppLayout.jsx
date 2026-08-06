@@ -297,7 +297,7 @@ export default function AppLayout() {
     ].join(' ')
 
   return (
-    <div className="flex min-h-screen bg-app text-fg">
+    <div className="flex h-screen bg-app text-fg">
       {/* Сайдбар */}
       <aside
         className="flex flex-shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200"
@@ -496,7 +496,7 @@ export default function AppLayout() {
           <NotificationsBell userId={user?.id} />
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="min-h-0 flex-1 overflow-auto p-6">
           <Outlet />
         </main>
       </div>

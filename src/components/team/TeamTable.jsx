@@ -25,6 +25,8 @@ export default function TeamTable({ columns, members, onOpen, onReassign }) {
   const [sortKey, setSortKey] = useState('active')
   const [sortDir, setSortDir] = useState('desc')
   const [expanded, setExpanded] = useState(() => new Set())
+  // Сколько задач показано у раскрытого сотрудника
+  const [expandedLimit, setExpandedLimit] = useState({})
 
   const rows = useMemo(() => {
     const arr = [...columns]
@@ -119,7 +121,7 @@ export default function TeamTable({ columns, members, onOpen, onReassign }) {
                         <p className="text-xs text-muted/60">Нет задач</p>
                       ) : (
                         <div className="space-y-1">
-                          {r.tasks.map((t) => {
+                          {r.tasks.slice(0, expandedLimit[r.user_id] ?? 20).map((t) => {
                             const dl = DEADLINE_STATE[t.deadline_state]
                             return (
                               <div key={t.id} className="flex items-center gap-2 rounded border-l-2 bg-surface px-2 py-1" style={{ borderLeftColor: dl?.color }}>
@@ -144,6 +146,25 @@ export default function TeamTable({ columns, members, onOpen, onReassign }) {
                               </div>
                             )
                           })}
+                          {r.tasks.length > (expandedLimit[r.user_id] ?? 20) && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedLimit((prev) => ({
+                                  ...prev,
+                                  [r.user_id]: (prev[r.user_id] ?? 20) + 20,
+                                }))
+                              }
+                              className="mx-auto mt-1 block rounded-lg border border-line px-2.5 py-1 text-xs text-muted transition hover:border-accent hover:text-fg"
+                            >
+                              Показать ещё{' '}
+                              {Math.min(
+                                20,
+                                r.tasks.length - (expandedLimit[r.user_id] ?? 20)
+                              )}{' '}
+                              из {r.tasks.length}
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>

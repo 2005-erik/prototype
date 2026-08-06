@@ -19,6 +19,8 @@ import { compareByPriorityAndDue } from '../lib/constants'
 import { formatDate, cn } from '../lib/utils'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
+import ShowMore from '../components/ui/ShowMore'
+import { useIncrementalList } from '../hooks/useCollapse'
 import TaskRow from '../components/task/TaskRow'
 
 // Приветствие по времени суток
@@ -28,6 +30,17 @@ function greeting() {
   if (h < 12) return 'Доброе утро'
   if (h < 18) return 'Добрый день'
   return 'Добрый вечер'
+}
+
+// Список задач внутри секции: сначала 20, дальше по кнопке
+function GroupTasks({ tasks, render }) {
+  const { visible, hidden, showMore, showAll, step } = useIncrementalList(tasks, 20)
+  return (
+    <>
+      {visible.map(render)}
+      <ShowMore hidden={hidden} step={step} onMore={showMore} onAll={showAll} />
+    </>
+  )
 }
 
 // Секция группы задач
@@ -225,7 +238,7 @@ export default function MyDayPage() {
               count={groups.gCritical.length}
               danger
             >
-              {groups.gCritical.map((t) => renderTask(t, reasons[t.id]))}
+              <GroupTasks tasks={groups.gCritical} render={(t) => renderTask(t, reasons[t.id])} />
             </Section>
           )}
 
@@ -238,7 +251,7 @@ export default function MyDayPage() {
               count={groups.gRework.length}
               danger
             >
-              {groups.gRework.map((t) => renderTask(t, reasons[t.id]))}
+              <GroupTasks tasks={groups.gRework} render={(t) => renderTask(t, reasons[t.id])} />
             </Section>
           )}
 
@@ -250,7 +263,7 @@ export default function MyDayPage() {
               titleClass="text-red-400"
               count={groups.gOverdue.length}
             >
-              {groups.gOverdue.map((t) => renderTask(t))}
+              <GroupTasks tasks={groups.gOverdue} render={(t) => renderTask(t)} />
             </Section>
           )}
 
@@ -262,7 +275,7 @@ export default function MyDayPage() {
               titleClass="text-orange-400"
               count={groups.gToday.length}
             >
-              {groups.gToday.map((t) => renderTask(t))}
+              <GroupTasks tasks={groups.gToday} render={(t) => renderTask(t)} />
             </Section>
           )}
 
@@ -273,7 +286,7 @@ export default function MyDayPage() {
               title="В работе"
               count={groups.gInProgress.length}
             >
-              {groups.gInProgress.map((t) => renderTask(t))}
+              <GroupTasks tasks={groups.gInProgress} render={(t) => renderTask(t)} />
             </Section>
           )}
 
@@ -285,7 +298,7 @@ export default function MyDayPage() {
               titleClass="text-muted"
               count={groups.gSoon.length}
             >
-              {groups.gSoon.map((t) => renderTask(t))}
+              <GroupTasks tasks={groups.gSoon} render={(t) => renderTask(t)} />
             </Section>
           )}
 
@@ -299,7 +312,7 @@ export default function MyDayPage() {
               collapsible
               defaultCollapsed
             >
-              {groups.gNoDeadline.map((t) => renderTask(t))}
+              <GroupTasks tasks={groups.gNoDeadline} render={(t) => renderTask(t)} />
             </Section>
           )}
         </div>

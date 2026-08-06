@@ -3,6 +3,8 @@ import { ChevronUp, ChevronDown, Inbox, Flag } from 'lucide-react'
 import { LOAD_STATE, DEADLINE_STATE, PRIORITY } from '../../lib/constants'
 import { formatDeadline, plural, cn } from '../../lib/utils'
 import PriorityChip from '../ui/PriorityChip'
+import ShowMore from '../ui/ShowMore'
+import { useIncrementalList } from '../../hooks/useCollapse'
 
 // Выпадающий список сотрудников для назначения
 function AssignMenu({ members, onAssign }) {
@@ -131,6 +133,7 @@ export default function UnassignedPanel({
   onToggle,
 }) {
   const [selected, setSelected] = useState(() => new Set())
+  const { visible, hidden, showMore, showAll, step } = useIncrementalList(tasks, 20)
 
   // Сотрудники по возрастанию загрузки
   const sorted = [...members].sort(
@@ -214,7 +217,7 @@ export default function UnassignedPanel({
               )}
 
               <div className="space-y-1.5">
-                {tasks.map((t) => {
+                {visible.map((t) => {
                   const dl = DEADLINE_STATE[t.deadline_state]
                   const prio = PRIORITY[t.priority]
                   return (
@@ -260,6 +263,7 @@ export default function UnassignedPanel({
                     </div>
                   )
                 })}
+                <ShowMore hidden={hidden} step={step} onMore={showMore} onAll={showAll} />
               </div>
             </>
           )}

@@ -325,7 +325,7 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Шапка доски */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
         {projects.length > 1 ? (
@@ -483,7 +483,7 @@ export default function BoardPage() {
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveTask(null)}
         >
-          <div className="flex flex-1 gap-4 overflow-x-auto pb-2">
+          <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2">
             {statuses.map((status) => (
               <BoardColumn
                 key={status.id}

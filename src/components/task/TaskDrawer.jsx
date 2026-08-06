@@ -48,6 +48,11 @@ function FileTypeIcon({ mime, className }) {
 }
 
 // Иконка и подпись для записи истории
+// Длинное описание сворачиваем, чтобы карточка не растягивалась
+const DESC_LIMIT = 300
+// В ленте комментариев по умолчанию видны только последние
+const COMMENTS_TAIL = 5
+
 const ACTIVITY_ICON = {
   created: Plus,
   imported: Download,
@@ -81,6 +86,8 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
   const [pendingStatusId, setPendingStatusId] = useState(null)
   const [statusComment, setStatusComment] = useState('')
   const [showHistory, setShowHistory] = useState(false)
+  const [descExpanded, setDescExpanded] = useState(false)
+  const [allComments, setAllComments] = useState(false)
 
   // Подтверждение удаления (вложение / пункт чек-листа)
   const [confirm, setConfirm] = useState(null)
@@ -100,6 +107,13 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
     isManager || (isAssignee && att.user_id === user?.id)
 
   const prio = PRIORITY[t.priority]
+
+  const descLong = (t.description?.length ?? 0) > DESC_LIMIT
+  const visibleComments =
+    allComments || details.comments.length <= COMMENTS_TAIL
+      ? details.comments
+      : details.comments.slice(-COMMENTS_TAIL)
+  const hiddenComments = details.comments.length - visibleComments.length
 
   // Обёртка: выполнить операцию хука и показать toast
   const notify = async (fn, success) => {
@@ -384,9 +398,24 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                 placeholder="Добавьте описание…"
               />
             ) : (
-              <p className="whitespace-pre-wrap text-sm text-fg">
-                {t.description || '—'}
-              </p>
+              <>
+                <p className="whitespace-pre-wrap text-sm text-fg">
+                  {descLong && !descExpanded
+                    ? `${t.description.slice(0, DESC_LIMIT).trimEnd()}…`
+                    : t.description || '—'}
+                </p>
+                {descLong && (
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded((v) => !v)}
+                    className="mt-1 text-xs font-medium text-accent transition hover:underline"
+                  >
+                    {descExpanded
+                      ? 'Свернуть'
+                      : `Развернуть (${t.description.length} символов)`}
+                  </button>
+                )}
+              </>
             )}
           </section>
 
@@ -545,14 +574,35 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
 
           {/* Комментарии */}
           <section>
-            <label className="mb-2 block text-xs font-medium uppercase text-muted">
-              Комментарии
-            </label>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="text-xs font-medium uppercase text-muted">
+                Комментарии
+                {details.comments.length > 0 && (
+                  <span className="ml-1.5 rounded-full bg-line px-1.5 py-0.5 text-[11px] normal-case text-muted">
+                    {details.comments.length}
+                  </span>
+                )}
+              </label>
+              {hiddenComments > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAllComments(true)}
+                  className="text-xs font-medium text-accent transition hover:underline"
+                >
+                  Показать все ({details.comments.length})
+                </button>
+              )}
+            </div>
             {details.loading && details.comments.length === 0 ? (
               <SkeletonText lines={2} />
             ) : (
               <ul className="space-y-3">
-                {details.comments.map((c) => (
+                {hiddenComments > 0 && (
+                  <li className="text-center text-xs text-muted/60">
+                    Скрыто предыдущих: {hiddenComments}
+                  </li>
+                )}
+                {visibleComments.map((c) => (
                   <li key={c.id} className="flex gap-2.5">
                     <Avatar
                       name={c.profiles?.full_name}

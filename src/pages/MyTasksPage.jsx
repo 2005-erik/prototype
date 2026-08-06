@@ -14,7 +14,7 @@ import EmptyState from '../components/ui/EmptyState'
 import TaskRow from '../components/task/TaskRow'
 import TaskDrawer from '../components/task/TaskDrawer'
 
-const PAGE = 50
+const PAGE = 20
 
 const PRIO_RANK = { critical: 4, high: 3, medium: 2, low: 1 }
 

@@ -21,6 +21,8 @@ import Select from '../components/ui/Select'
 import Avatar from '../components/ui/Avatar'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
+import ShowMore from '../components/ui/ShowMore'
+import { useIncrementalList } from '../hooks/useCollapse'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
 import CreateUserModal from '../components/admin/CreateUserModal'
@@ -162,6 +164,15 @@ export default function UsersAdminPage() {
       return true
     })
   }, [users, search, roleFilter, deptFilter, statusFilter, projectFilter])
+
+  // Длинный список показываем порциями
+  const {
+    visible: visibleUsers,
+    hidden: hiddenUsers,
+    showMore,
+    showAll,
+    step,
+  } = useIncrementalList(filtered, 20)
 
   // Сотрудники (не admin) без единого проекта — им не видны задачи
   const orphanCount = useMemo(
@@ -319,6 +330,14 @@ export default function UsersAdminPage() {
         </Button>
       </div>
 
+      {/* Сколько показано из скольких */}
+      {filtered.length > 0 && (
+        <p className="-mb-2 text-xs text-muted">
+          Показано {visibleUsers.length} из {filtered.length}
+          {filtered.length !== users.length && ` (всего ${users.length})`}
+        </p>
+      )}
+
       {/* Сотрудники, потерянные вне проектов */}
       {orphanCount > 0 && projectFilter !== 'none' && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-500">
@@ -363,7 +382,7 @@ export default function UsersAdminPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => {
+              {visibleUsers.map((u) => {
                 const st = statusOf(u)
                 return (
                   <tr key={u.id} className="border-t border-line">
@@ -439,6 +458,13 @@ export default function UsersAdminPage() {
               })}
             </tbody>
           </table>
+          <ShowMore
+            hidden={hiddenUsers}
+            step={step}
+            onMore={showMore}
+            onAll={showAll}
+            className="border-t border-line"
+          />
         </div>
       )}
 

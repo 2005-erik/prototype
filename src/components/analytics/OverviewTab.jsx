@@ -8,6 +8,7 @@ import {
 } from '../../hooks/useAnalytics'
 import Skeleton from '../ui/Skeleton'
 import EmptyState from '../ui/EmptyState'
+import CollapsibleSection from '../ui/CollapsibleSection'
 import MetricWithTrend from './MetricWithTrend'
 import TrendChart from './TrendChart'
 import ReworkPie from './ReworkPie'
@@ -78,22 +79,23 @@ export default function OverviewTab({ projectId, period, onOpenBoard }) {
       </div>
 
       {/* Динамика */}
-      <section className="rounded-lg border border-line bg-surface p-4">
-        <h3 className="mb-3 text-sm font-semibold text-fg">Динамика</h3>
+      <CollapsibleSection id="analytics.overview.trend" title="Динамика" defaultOpen>
         <TrendChart data={trend.data ?? []} />
-      </section>
+      </CollapsibleSection>
 
       {/* Распределение по возвратам */}
-      <section className="rounded-lg border border-line bg-surface p-4">
-        <h3 className="mb-3 text-sm font-semibold text-fg">
-          Распределение по возвратам
-        </h3>
+      <CollapsibleSection
+        id="analytics.overview.rework"
+        title="Распределение по возвратам"
+        count={distTotal}
+        defaultOpen={false}
+      >
         {distTotal === 0 ? (
           <EmptyState icon={BarChart3} title="Нет задач за период" />
         ) : (
           <ReworkPie distribution={dist} />
         )}
-      </section>
+      </CollapsibleSection>
     </div>
   )
 }

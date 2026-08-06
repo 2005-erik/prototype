@@ -4,6 +4,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, X } from 'lucide-react'
 import TaskCard from './TaskCard'
 import Button from '../ui/Button'
+import ShowMore from '../ui/ShowMore'
+import { useIncrementalList } from '../../hooks/useCollapse'
 import { cn } from '../../lib/utils'
 
 // Колонка статуса канбан-доски (ширина 320px).
@@ -19,6 +21,10 @@ export default function BoardColumn({
   onTaskContextMenu,
 }) {
   const [title, setTitle] = useState('')
+
+  // Длинные колонки не рендерим целиком: первые 20, дальше по кнопке.
+  // Ограничивает и число узлов в DOM, и высоту колонки.
+  const { visible, hidden, showMore, showAll, step } = useIncrementalList(tasks, 20)
 
   // Вся колонка — зона сброса для drag&drop
   const { setNodeRef, isOver } = useDroppable({
@@ -37,9 +43,9 @@ export default function BoardColumn({
   }
 
   return (
-    <div className="flex w-80 flex-shrink-0 flex-col">
-      {/* Шапка колонки */}
-      <div className="mb-2 flex items-center gap-2 px-1">
+    <div className="flex max-h-full w-80 flex-shrink-0 flex-col">
+      {/* Шапка колонки — остаётся на месте при прокрутке списка */}
+      <div className="mb-2 flex flex-shrink-0 items-center gap-2 px-1">
         <span
           className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
           style={{ backgroundColor: status.color ?? '#94a3b8' }}
@@ -112,10 +118,10 @@ export default function BoardColumn({
         )}
 
         <SortableContext
-          items={tasks.map((t) => t.id)}
+          items={visible.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
         >
-          {tasks.map((task) => (
+          {visible.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
@@ -124,6 +130,8 @@ export default function BoardColumn({
             />
           ))}
         </SortableContext>
+
+        <ShowMore hidden={hidden} step={step} onMore={showMore} onAll={showAll} />
 
         {tasks.length === 0 && !adding && (
           <p className="py-6 text-center text-sm text-muted/60">Нет задач</p>

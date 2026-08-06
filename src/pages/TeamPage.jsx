@@ -1,12 +1,4 @@
 import { useState, useMemo, useEffect } from 'react'
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
 import { Search, Columns3, Table2, Users } from 'lucide-react'
 import {
   useProjects,
@@ -22,8 +14,8 @@ import { useToast } from '../components/ui/Toast'
 import { PRIORITY } from '../lib/constants'
 import { cn } from '../lib/utils'
 import TeamSummary from '../components/team/TeamSummary'
-import TeamColumn from '../components/team/TeamColumn'
-import TeamTaskCard from '../components/team/TeamTaskCard'
+import { TeamMemberCard, UnassignedCard } from '../components/team/TeamMemberCard'
+import MemberTasksDrawer from '../components/team/MemberTasksDrawer'
 import TeamTable from '../components/team/TeamTable'
 import UnassignedPanel from '../components/team/UnassignedPanel'
 import TaskContextMenu from '../components/team/TaskContextMenu'
@@ -58,10 +50,8 @@ export default function TeamPage() {
   const [menu, setMenu] = useState(null) // { task, x, y }
   const [pendingReassign, setPendingReassign] = useState(null)
 
-  const [activeTask, setActiveTask] = useState(null)
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  )
+  // Задачи сотрудника открываются в панели справа — сетка не прыгает
+  const [memberDrawer, setMemberDrawer] = useState(null)
 
   const projectsById = useMemo(() => {
     const m = {}
@@ -131,45 +121,27 @@ export default function TeamPage() {
   }
 
   // ---- Переназначение ----
-  const doReassign = async (taskId, assigneeId) => {
+  const applyReassign = async (taskId, assigneeId) => {
     const { error: err } = await reassignTask(taskId, assigneeId)
     if (err) toast.error(err)
     else toast.success(assigneeId ? 'Переназначено' : 'Исполнитель снят')
   }
 
-  const handleDragStart = (e) => {
-    setActiveTask(allTasks.find((t) => t.id === e.active.id) ?? null)
-  }
-
-  const handleDragEnd = (e) => {
-    setActiveTask(null)
-    const { active, over } = e
-    if (!over) return
-    const overId = String(over.id)
-    let target
-    if (overId.startsWith('col:')) {
-      const seg = overId.slice(4)
-      target = seg === 'unassigned' ? null : seg
-    } else {
-      target = allTasks.find((t) => t.id === overId)?.assignee_id ?? null
-    }
-    const src = allTasks.find((t) => t.id === active.id)
-    if (!src || src.assignee_id === target) return
-
-    // Перегрузка целевого сотрудника → подтверждение
-    if (target) {
-      const col = columns.find((c) => c.user_id === target)
+  const doReassign = async (taskId, assigneeId) => {
+    // Назначение на перегруженного — только после подтверждения
+    if (assigneeId) {
+      const col = columns.find((c) => c.user_id === assigneeId)
       if (col?.load.load_state === 'overloaded') {
         setPendingReassign({
-          taskId: active.id,
-          assigneeId: target,
+          taskId,
+          assigneeId,
           name: col.profile?.full_name,
           count: col.load.active,
         })
         return
       }
     }
-    doReassign(active.id, target)
+    await applyReassign(taskId, assigneeId)
   }
 
   if (loading && columns.length === 0) {
@@ -242,35 +214,30 @@ export default function TeamPage() {
           onReassign={doReassign}
         />
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveTask(null)}
-        >
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {/* Без исполнителя — всегда слева */}
-            <TeamColumn
-              column={{ isUnassigned: true, tasks: displayUnassigned }}
-              projectsById={showAllProjects ? projectsById : null}
-              onOpen={setOpenTask}
-              onContextMenu={(e, task) => setMenu({ task, x: e.clientX, y: e.clientY })}
-            />
-            {displayColumns.map((c) => (
-              <TeamColumn
-                key={c.user_id}
-                column={c}
-                projectsById={showAllProjects ? projectsById : null}
-                onOpen={setOpenTask}
-                onContextMenu={(e, task) => setMenu({ task, x: e.clientX, y: e.clientY })}
-              />
-            ))}
-          </div>
-          <DragOverlay>
-            {activeTask ? <TeamTaskCard task={activeTask} overlay /> : null}
-          </DragOverlay>
-        </DndContext>
+        /* Карточки-сводки: список задач — в панели справа, по клику */
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <UnassignedCard
+            count={displayUnassigned.length}
+            onDistribute={() => setPanelOpen(true)}
+          />
+          {displayColumns.map((c) => (
+            <TeamMemberCard key={c.user_id} column={c} onOpen={setMemberDrawer} />
+          ))}
+        </div>
+      )}
+
+      {/* Задачи выбранного сотрудника */}
+      {memberDrawer && (
+        <MemberTasksDrawer
+          column={columns.find((c) => c.user_id === memberDrawer.user_id) ?? memberDrawer}
+          projectsById={showAllProjects ? projectsById : null}
+          onOpenTask={(t) => {
+            setMemberDrawer(null)
+            setOpenTask(t)
+          }}
+          onContextMenu={(e, task) => setMenu({ task, x: e.clientX, y: e.clientY })}
+          onClose={() => setMemberDrawer(null)}
+        />
       )}
 
       {/* Панель «Требуют распределения» (по текущему охвату) */}
@@ -310,7 +277,7 @@ export default function TeamPage() {
         confirmText="Переназначить"
         danger
         onConfirm={() => {
-          doReassign(pendingReassign.taskId, pendingReassign.assigneeId)
+          applyReassign(pendingReassign.taskId, pendingReassign.assigneeId)
           setPendingReassign(null)
         }}
         onCancel={() => setPendingReassign(null)}

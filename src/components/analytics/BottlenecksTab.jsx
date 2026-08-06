@@ -2,6 +2,7 @@ import { AlertTriangle, Hourglass } from 'lucide-react'
 import { useBottlenecks } from '../../hooks/useAnalytics'
 import Skeleton from '../ui/Skeleton'
 import EmptyState from '../ui/EmptyState'
+import CollapsibleSection from '../ui/CollapsibleSection'
 import { formatDaysDuration } from '../../lib/utils'
 import BottleneckChart from './BottleneckChart'
 
@@ -37,12 +38,14 @@ export default function BottlenecksTab({ projectId, period }) {
   return (
     <div className="space-y-6">
       {/* Диаграмма */}
-      <section className="rounded-lg border border-line bg-surface p-4">
-        <h3 className="mb-3 text-sm font-semibold text-fg">
-          Среднее время в статусе
-        </h3>
+      <CollapsibleSection
+        id="analytics.bottlenecks.chart"
+        title="Среднее время в статусе"
+        count={rows.length}
+        defaultOpen
+      >
         <BottleneckChart rows={rows} slowestId={slowest?.status_id} />
-      </section>
+      </CollapsibleSection>
 
       {/* Текстовый вывод */}
       {slowest && (
@@ -58,7 +61,13 @@ export default function BottlenecksTab({ projectId, period }) {
       )}
 
       {/* Таблица */}
-      <section className="overflow-hidden rounded-lg border border-line">
+      <CollapsibleSection
+        id="analytics.bottlenecks.table"
+        title="Подробно по статусам"
+        count={rows.length}
+        defaultOpen={false}
+        className="overflow-hidden"
+      >
         <table className="w-full text-sm">
           <thead className="bg-app text-left text-xs uppercase text-muted">
             <tr>
@@ -100,7 +109,7 @@ export default function BottlenecksTab({ projectId, period }) {
             ))}
           </tbody>
         </table>
-      </section>
+      </CollapsibleSection>
     </div>
   )
 }
