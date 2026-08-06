@@ -8,10 +8,12 @@ const VARIANTS = {
   danger: 'bg-red-600 text-white hover:bg-red-500',
 }
 
+// max-md:min-h-11 — 44px тач-цель на телефоне; на десктопе кнопки
+// остаются компактными, там курсор точный
 const SIZES = {
-  sm: 'gap-1 px-2.5 py-1 text-xs',
-  md: 'gap-1.5 px-3.5 py-2 text-sm',
-  lg: 'gap-2 px-5 py-2.5 text-base',
+  sm: 'gap-1 px-2.5 py-1 text-xs max-md:min-h-9',
+  md: 'gap-1.5 px-3.5 py-2 text-sm max-md:min-h-11',
+  lg: 'gap-2 px-5 py-2.5 text-base max-md:min-h-11',
 }
 
 export default function Button({

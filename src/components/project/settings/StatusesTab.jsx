@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import {
   DndContext,
   closestCenter,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -166,7 +167,8 @@ export default function StatusesTab({ settings }) {
   useEffect(() => setItems(statuses), [statuses])
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } })
   )
 
   const initialCount = items.filter((s) => s.is_initial).length

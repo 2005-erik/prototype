@@ -12,6 +12,8 @@ import {
   LogOut,
   Bell,
   PanelLeftClose,
+  Menu,
+  X,
   ChevronRight,
   ChevronDown,
   ArrowRightLeft,
@@ -268,6 +270,14 @@ export default function AppLayout() {
     nav.push({ to: '/admin/auth-log', label: 'Журнал входов', icon: ScrollText })
   }
 
+  // Выдвижное меню на узком экране
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  // Переход по ссылке закрывает меню — иначе панель остаётся поверх контента
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [location.pathname])
+
   // Заголовок текущей страницы
   const homeTitle = isEmployee ? 'Мой день' : 'Дашборд'
   const titleMap = {
@@ -298,9 +308,23 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen bg-app text-fg">
-      {/* Сайдбар */}
+      {/* Затемнение под выдвижным меню (только узкий экран) */}
+      {mobileNavOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Сайдбар. На узком экране — выдвижная панель поверх контента,
+          на широком — обычная колонка, сжимающая рабочую область. */}
       <aside
-        className="flex flex-shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200"
+        className={cn(
+          'flex flex-col border-r border-line bg-surface transition-transform duration-200',
+          'safe-left fixed inset-y-0 left-0 z-50 lg:static lg:z-auto lg:translate-x-0 lg:transition-[width]',
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:flex-shrink-0'
+        )}
         style={{ width: collapsed ? 64 : 260 }}
       >
         {/* Шапка сайдбара: знак + название + кнопка сворачивания.
@@ -344,10 +368,18 @@ export default function AppLayout() {
               <button
                 type="button"
                 onClick={() => setCollapsed(true)}
-                className="rounded-lg p-2 text-muted transition hover:bg-line hover:text-fg"
+                className="hidden rounded-lg p-2 text-muted transition hover:bg-line hover:text-fg lg:block"
                 aria-label="Свернуть меню"
               >
                 <PanelLeftClose className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="touch-target rounded-lg p-2 text-muted transition hover:bg-line hover:text-fg lg:hidden"
+                aria-label="Закрыть меню"
+              >
+                <X className="h-5 w-5" />
               </button>
             </>
           )}
@@ -491,12 +523,22 @@ export default function AppLayout() {
 
       {/* Основная область */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between border-b border-line bg-surface px-6">
-          <h1 className="text-lg font-semibold text-fg">{pageTitle}</h1>
+        <header className="safe-top flex h-16 flex-shrink-0 items-center gap-2 border-b border-line bg-surface px-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen(true)}
+            className="touch-target -ml-2 rounded-lg p-2 text-muted transition hover:bg-line hover:text-fg lg:hidden"
+            aria-label="Открыть меню"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <h1 className="min-w-0 flex-1 truncate text-base font-semibold text-fg sm:text-lg">
+            {pageTitle}
+          </h1>
           <NotificationsBell userId={user?.id} />
         </header>
 
-        <main className="min-h-0 flex-1 overflow-auto p-6">
+        <main className="safe-bottom min-h-0 flex-1 overflow-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </div>

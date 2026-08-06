@@ -44,9 +44,9 @@ export default function BoardColumn({
   }
 
   return (
-    <div className="flex max-h-full w-80 flex-shrink-0 flex-col">
+    <div className="flex max-h-full w-[85vw] max-w-80 flex-shrink-0 snap-start flex-col sm:w-80">
       {/* Шапка колонки — остаётся на месте при прокрутке списка */}
-      <div className="mb-2 flex flex-shrink-0 items-center gap-2 px-1">
+      <div className="sticky top-0 z-10 mb-2 flex flex-shrink-0 items-center gap-2 bg-app px-1 py-1">
         <span
           className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
           style={{ backgroundColor: status.color ?? '#94a3b8' }}

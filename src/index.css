@@ -44,3 +44,30 @@
 .animate-fade-slide-in {
   animation: fade-slide-in 0.3s ease-out;
 }
+
+/* ---------------------------------------------------------------
+   Мобильные утилиты: безопасные зоны iPhone и минимальная тач-цель.
+   44px — минимум, ниже которого палец промахивается (HIG/WCAG 2.2).
+   На широком экране цель не раздуваем: там курсор точный.
+   --------------------------------------------------------------- */
+.safe-top    { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-left   { padding-left: env(safe-area-inset-left); }
+.safe-right  { padding-right: env(safe-area-inset-right); }
+
+.safe-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+@media (max-width: 767px) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Перетаскивание пальцем: без этого браузер уводит жест в прокрутку */
+.dnd-draggable {
+  touch-action: manipulation;
+}

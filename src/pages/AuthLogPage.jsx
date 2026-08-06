@@ -149,7 +149,7 @@ export default function AuthLogPage() {
         <EmptyState icon={ScrollText} title="Записей нет" />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-app text-left text-xs uppercase text-muted">
               <tr>
                 <th className="px-3 py-2 font-medium">Дата</th>

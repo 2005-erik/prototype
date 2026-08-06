@@ -25,7 +25,7 @@ export default function StatusCommentModal({ pending, onConfirm, onCancel }) {
         aria-hidden="true"
       />
       <div
-        className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-surface p-5 shadow-xl"
+        className="safe-x fixed left-1/2 top-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-line bg-surface p-4 shadow-xl sm:w-full sm:p-5"
         role="dialog"
         aria-label="Комментарий к смене статуса"
       >

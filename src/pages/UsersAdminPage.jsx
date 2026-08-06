@@ -366,7 +366,74 @@ export default function UsersAdminPage() {
       ) : filtered.length === 0 ? (
         <EmptyState icon={Users} title="Пользователи не найдены" />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-line">
+        <>
+        {/* Телефон: карточки — горизонтальный скролл таблицы на узком
+            экране означает, что половину колонок никто не увидит */}
+        <div className="space-y-2 md:hidden">
+          {visibleUsers.map((u) => {
+            const st = statusOf(u)
+            return (
+              <div key={u.id} className="rounded-lg border border-line bg-surface p-3">
+                <div className="flex items-start gap-2.5">
+                  <Avatar name={u.full_name} src={u.avatar_url} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-fg">
+                      {u.full_name}
+                      {u.id === me?.id && (
+                        <span className="ml-1 text-xs text-muted">(вы)</span>
+                      )}
+                    </p>
+                    <p className="truncate text-xs text-muted">{u.email ?? '—'}</p>
+                    {(u.position || u.department) && (
+                      <p className="truncate text-xs text-muted">
+                        {[u.position, u.department].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                  <RowMenu
+                    user={u}
+                    isSelf={u.id === me?.id}
+                    onEdit={() => setEditUser(u)}
+                    onReset={() => setResetUser(u)}
+                    onProjects={() => setProjectsUser(u)}
+                    onToggleActive={() => toggleActive(u)}
+                  />
+                </div>
+
+                <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded bg-line px-1.5 py-0.5 text-muted">
+                    {ROLE_LABELS[u.role]}
+                  </span>
+                  <span className={cn('font-medium', st.cls)}>{st.label}</span>
+                  {(u.projects ?? []).length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setProjectsUser(u)}
+                      className="flex items-center gap-1"
+                    >
+                      <Badge tone="amber">Без проекта</Badge>
+                      <span className="text-accent">добавить</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setProjectsUser(u)}
+                      className="text-muted underline-offset-2 hover:underline"
+                    >
+                      проектов: {(u.projects ?? []).length}
+                    </button>
+                  )}
+                  <span className="text-muted/60">
+                    {u.last_login_at ? formatRelative(u.last_login_at) : 'не входил'}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+          <ShowMore hidden={hiddenUsers} step={step} onMore={showMore} onAll={showAll} />
+        </div>
+
+        <div className="hidden overflow-x-auto rounded-lg border border-line md:block">
           <table className="w-full text-sm">
             <thead className="bg-app text-left text-xs uppercase text-muted">
               <tr>
@@ -466,6 +533,7 @@ export default function UsersAdminPage() {
             className="border-t border-line"
           />
         </div>
+        </>
       )}
 
       {/* Модалки */}

@@ -72,7 +72,7 @@ export default function TaskCard({ task, tags = [], onOpen, onContextMenu, overl
         onContextMenu(e, task)
       }}
       className={cn(
-        'rounded-lg border border-line border-l-4 bg-app p-3 text-left transition hover:border-accent',
+        'dnd-draggable rounded-lg border border-line border-l-4 bg-app p-3 text-left transition hover:border-accent',
         canDrag ? 'cursor-pointer' : 'cursor-not-allowed',
         overlay && 'rotate-2 shadow-xl'
       )}

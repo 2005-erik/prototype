@@ -35,7 +35,59 @@ export default function TeamTaskList({
       {tasks.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted/60">Задач нет</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-line">
+        <>
+        {/* Телефон: карточки вместо таблицы */}
+        <div className="space-y-2 md:hidden">
+          {visible.map((t) => {
+            const dl = DEADLINE_STATE[t.deadline_state]
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onOpen?.(t)}
+                onContextMenu={(e) => {
+                  if (!onContextMenu) return
+                  e.preventDefault()
+                  onContextMenu(e, t)
+                }}
+                className="w-full rounded-lg border border-line bg-surface p-3 text-left transition hover:border-accent"
+              >
+                <p className="text-sm text-fg">
+                  <span className="text-xs text-muted">#{t.number}</span> {t.title}
+                </p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                  <PriorityChip priority={t.priority} size="xs" />
+                  <span
+                    className="rounded px-1.5 py-0.5"
+                    style={{
+                      backgroundColor: `${t.status_color ?? '#2bbaac'}26`,
+                      color: t.status_color ?? '#2bbaac',
+                    }}
+                  >
+                    {t.status_name ?? '—'}
+                  </span>
+                  {projectsById?.[t.project_id] && (
+                    <span className="rounded bg-line px-1.5 py-0.5 text-muted">
+                      {projectsById[t.project_id].name}
+                    </span>
+                  )}
+                  {t.due_date && (
+                    <span className="flex items-center gap-1" style={{ color: dl?.color }}>
+                      <Clock className="h-3 w-3" />
+                      {formatDeadline(t.due_date)}
+                    </span>
+                  )}
+                  <span className="text-muted">
+                    {t.assignee_name ?? 'не назначен'}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
+          <ShowMore hidden={hidden} step={step} onMore={showMore} onAll={showAll} />
+        </div>
+
+        <div className="hidden overflow-x-auto rounded-lg border border-line md:block">
           <table className="w-full text-sm">
             <thead className="bg-app text-left text-xs uppercase text-muted">
               <tr>
@@ -119,6 +171,7 @@ export default function TeamTaskList({
             className="border-t border-line"
           />
         </div>
+        </>
       )}
     </div>
   )

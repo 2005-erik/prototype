@@ -20,7 +20,7 @@ const TYPES = {
 
 function ToastViewport({ toasts, onClose }) {
   return createPortal(
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-full max-w-sm flex-col gap-2">
+    <div className="safe-bottom pointer-events-none fixed bottom-4 right-4 z-[60] flex w-full max-w-[calc(100vw-2rem)] flex-col gap-2 sm:max-w-sm">
       {toasts.map((t) => {
         const { icon: Icon, ring, color } = TYPES[t.type] ?? TYPES.info
         return (

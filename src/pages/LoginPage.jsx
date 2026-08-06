@@ -81,7 +81,7 @@ export default function LoginPage() {
     'w-full rounded-lg border border-line bg-app py-2.5 pl-10 pr-3 text-fg placeholder-muted outline-none transition focus:border-accent focus:ring-1 focus:ring-accent'
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-app px-4 py-10">
+    <div className="safe-bottom safe-x flex min-h-screen flex-col items-center justify-center bg-app px-4 py-10">
       {/* Знак и название — над формой */}
       <div className="mb-8 flex flex-col items-center text-center">
         <img
@@ -97,7 +97,7 @@ export default function LoginPage() {
         <p className="mt-1.5 text-sm text-muted">Система управления задачами</p>
       </div>
 
-      <div className="w-full max-w-sm rounded-lg border border-line bg-surface p-8 shadow-xl">
+      <div className="w-full max-w-sm rounded-lg border border-line bg-surface p-5 shadow-xl sm:p-8">
 
         {/* Email */}
         <label className="mb-4 block">
@@ -166,7 +166,7 @@ export default function LoginPage() {
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          className="mt-4 flex w-full items-center justify-center rounded-lg bg-accent py-2.5 font-medium text-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-4 flex min-h-11 w-full items-center justify-center rounded-lg bg-accent py-2.5 font-medium text-on-accent transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? <AzimutSpinner size={18} /> : 'Войти'}
         </button>

@@ -30,7 +30,7 @@ export default function Modal({
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-black/50"
         onClick={closeOnOverlay ? onClose : undefined}
@@ -38,7 +38,8 @@ export default function Modal({
       />
       <div
         className={cn(
-          'relative flex max-h-[90vh] w-full flex-col rounded-lg border border-line bg-surface shadow-xl',
+          'safe-bottom relative flex h-full max-h-full w-full flex-col border border-line bg-surface shadow-xl',
+          'sm:h-auto sm:max-h-[90vh] sm:rounded-lg',
           SIZES[size]
         )}
         role="dialog"
@@ -50,7 +51,7 @@ export default function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-muted transition hover:bg-line hover:text-fg"
+              className="touch-target rounded-lg p-1.5 text-muted transition hover:bg-line hover:text-fg"
               aria-label="Закрыть"
             >
               <X className="h-5 w-5" />

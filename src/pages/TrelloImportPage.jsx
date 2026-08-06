@@ -47,7 +47,7 @@ const STEPS = [
 
 function Stepper({ step }) {
   return (
-    <div className="mb-6 flex items-center gap-2">
+    <div className="mb-6 flex flex-wrap items-center gap-2">
       {STEPS.map((s, i) => (
         <div key={s.n} className="flex items-center gap-2">
           <div
@@ -65,12 +65,14 @@ function Stepper({ step }) {
           <span
             className={cn(
               'text-sm',
-              step === s.n ? 'font-medium text-fg' : 'text-muted'
+              step === s.n ? 'font-medium text-fg' : 'hidden text-muted sm:inline'
             )}
           >
             {s.label}
           </span>
-          {i < STEPS.length - 1 && <div className="mx-1 h-px w-8 bg-line" />}
+          {i < STEPS.length - 1 && (
+            <div className="mx-1 hidden h-px w-8 bg-line sm:block" />
+          )}
         </div>
       ))}
     </div>
@@ -463,7 +465,7 @@ export default function TrelloImportPage() {
 
       <Stepper step={step} />
 
-      <div className="rounded-lg border border-line bg-surface p-5">
+      <div className="rounded-lg border border-line bg-surface p-4 sm:p-5">
         {/* -------- Шаг 1: файл -------- */}
         {step === 1 && (
           <div className="space-y-4">
@@ -602,11 +604,14 @@ export default function TrelloImportPage() {
               Сопоставьте списки Trello со статусами системы.
             </p>
             {lists.map((l) => (
-              <div key={l.id} className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div
+                key={l.id}
+                className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-[1fr_auto_1fr] sm:gap-3"
+              >
                 <span className="truncate text-sm text-fg" title={l.name}>
                   {l.name}
                 </span>
-                <ArrowRight className="h-4 w-4 text-muted" />
+                <ArrowRight className="hidden h-4 w-4 text-muted sm:block" />
                 <Select
                   value={statusMap[l.id] ?? ''}
                   onChange={(e) =>
@@ -636,12 +641,15 @@ export default function TrelloImportPage() {
               <p className="text-sm text-muted">В доске нет участников.</p>
             ) : (
               members.map((m) => (
-                <div key={m.id} className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div
+                  key={m.id}
+                  className="grid grid-cols-1 items-center gap-1.5 sm:grid-cols-[1fr_auto_1fr] sm:gap-3"
+                >
                   <span className="min-w-0">
                     <span className="block truncate text-sm text-fg">{m.fullName}</span>
                     <span className="block truncate text-xs text-muted">@{m.username}</span>
                   </span>
-                  <ArrowRight className="h-4 w-4 text-muted" />
+                  <ArrowRight className="hidden h-4 w-4 text-muted sm:block" />
                   <Select
                     value={memberMap[m.id] ?? ''}
                     onChange={(e) =>

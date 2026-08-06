@@ -68,7 +68,8 @@ export default function BottlenecksTab({ projectId, period }) {
         defaultOpen={false}
         className="overflow-hidden"
       >
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px] text-sm">
           <thead className="bg-app text-left text-xs uppercase text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">Статус</th>
@@ -109,6 +110,7 @@ export default function BottlenecksTab({ projectId, period }) {
             ))}
           </tbody>
         </table>
+        </div>
       </CollapsibleSection>
     </div>
   )

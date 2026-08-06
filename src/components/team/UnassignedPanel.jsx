@@ -170,11 +170,11 @@ export default function UnassignedPanel({
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-line bg-surface">
+    <div className="safe-bottom safe-x fixed bottom-0 left-0 right-0 z-30 border-t border-line bg-surface">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-2 px-6 py-2 text-sm text-fg transition hover:bg-line/40"
+        className="touch-target flex w-full items-center gap-2 px-4 py-2 text-sm text-fg transition hover:bg-line/40 sm:px-6"
       >
         <Inbox className="h-4 w-4 text-muted" />
         Требуют распределения
@@ -187,7 +187,7 @@ export default function UnassignedPanel({
       </button>
 
       {open && (
-        <div className="max-h-72 overflow-y-auto px-6 pb-3">
+        <div className="max-h-72 overflow-y-auto px-4 pb-3 sm:px-6">
           {tasks.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted/60">
               Все задачи распределены

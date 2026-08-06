@@ -53,7 +53,62 @@ export default function EmployeeTable({ rows = [], selected, onToggleSelect }) {
   const limitReached = selected.size >= 4
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-line">
+    <>
+      {/* Телефон: карточки — в таблице 6 колонок, на узком экране
+          они превращаются в горизонтальный скролл вслепую */}
+      <div className="space-y-2 md:hidden">
+        {sorted.map((e) => {
+          const load = LOAD_STATE[e.load_state]
+          const checked = selected.has(e.user_id)
+          return (
+            <div
+              key={e.user_id}
+              className="rounded-lg border border-line bg-surface p-3"
+            >
+              <label className="flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={!checked && limitReached}
+                  onChange={() => onToggleSelect(e.user_id)}
+                  className="mt-1 accent-[#ecc371] disabled:opacity-40"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-fg">
+                    {e.full_name}
+                  </span>
+                  <span
+                    className="block text-xs"
+                    style={{ color: load?.color }}
+                  >
+                    {Math.round(e.load_percent ?? 0)}% · {load?.label}
+                  </span>
+                </span>
+              </label>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                <div className="flex justify-between">
+                  <dt className="text-muted">Завершено</dt>
+                  <dd className="text-fg">{e.completed ?? 0}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted">% в срок</dt>
+                  <dd className="text-fg">{e.on_time_percent ?? '—'}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted">Ср. время</dt>
+                  <dd className="text-fg">{e.avg_completion_days ?? '—'}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted">Ср. возврат</dt>
+                  <dd className="text-fg">{e.avg_rework ?? 0}</dd>
+                </div>
+              </dl>
+            </div>
+          )
+        })}
+      </div>
+
+    <div className="hidden overflow-x-auto rounded-lg border border-line md:block">
       <table className="w-full text-sm">
         <thead className="bg-app text-left text-xs uppercase text-muted">
           <tr>
@@ -129,5 +184,6 @@ export default function EmployeeTable({ rows = [], selected, onToggleSelect }) {
         </tbody>
       </table>
     </div>
+    </>
   )
 }

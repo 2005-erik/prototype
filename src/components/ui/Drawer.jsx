@@ -30,7 +30,7 @@ export default function Drawer({
         aria-hidden="true"
       />
       <aside
-        className="absolute right-0 top-0 flex h-full w-full flex-col border-l border-line bg-surface shadow-xl"
+        className="safe-bottom safe-right absolute right-0 top-0 flex h-full w-full flex-col border-l border-line bg-surface shadow-xl"
         style={{ maxWidth: width }}
         role="dialog"
         aria-modal="true"
@@ -43,7 +43,7 @@ export default function Drawer({
             <button
               type="button"
               onClick={onClose}
-              className="mt-0.5 flex-shrink-0 rounded-lg p-1.5 text-muted transition hover:bg-line hover:text-fg"
+              className="touch-target mt-0.5 flex-shrink-0 rounded-lg p-1.5 text-muted transition hover:bg-line hover:text-fg"
               aria-label="Закрыть"
             >
               <X className="h-5 w-5" />

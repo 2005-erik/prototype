@@ -4,7 +4,8 @@ import {
   DndContext,
   DragOverlay,
   closestCorners,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
@@ -215,8 +216,13 @@ export default function BoardPage() {
   const [activeTask, setActiveTask] = useState(null)
   // Отложенное перемещение, ожидающее обязательного комментария
   const [pendingMove, setPendingMove] = useState(null)
+  // Мышь — порог сдвига, палец — удержание: иначе жест перетаскивания
+  // съедает вертикальную прокрутку колонки на телефоне.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 8 },
+    })
   )
 
   const handleDragStart = (event) => {
@@ -531,7 +537,7 @@ export default function BoardPage() {
           onDragEnd={handleDragEnd}
           onDragCancel={() => setActiveTask(null)}
         >
-          <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-2">
+          <div className="safe-x flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:snap-none sm:gap-4">
             {statuses.map((status) => (
               <BoardColumn
                 key={status.id}

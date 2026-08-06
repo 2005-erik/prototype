@@ -56,7 +56,7 @@ export default function TeamTable({ columns, members, onOpen, onReassign }) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-line">
-      <table className="w-full text-sm">
+      <table className="w-full min-w-[720px] text-sm">
         <thead className="bg-app text-left text-xs uppercase text-muted">
           <tr>
             <th className="w-8 px-3 py-2" />
