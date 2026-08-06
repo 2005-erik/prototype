@@ -18,7 +18,7 @@ import {
   useProjectsOverview,
 } from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
-import { PRIORITY } from '../../lib/constants'
+import { PRIORITY, compareByPriorityAndDue } from '../../lib/constants'
 import { getInitials, cn } from '../../lib/utils'
 import BoardColumn from './BoardColumn'
 import TaskCard from './TaskCard'
@@ -26,6 +26,7 @@ import ProjectSelector from './ProjectSelector'
 import StatusCommentModal from './StatusCommentModal'
 import TaskDrawer from '../task/TaskDrawer'
 import CreateTaskModal from '../task/CreateTaskModal'
+import PriorityMenu from '../task/PriorityMenu'
 import Button from '../ui/Button'
 import EmptyState from '../ui/EmptyState'
 import Skeleton from '../ui/Skeleton'
@@ -96,6 +97,8 @@ export default function BoardPage() {
     // в завершающем статусе, не видны и кажется, что импорт не сработал.
     // Только включаем: снятый вручную флажок обратно не навязываем.
     if (searchParams.get('completed') === '1') setShowCompleted(true)
+    const p = searchParams.get('priority')
+    if (p && PRIORITY[p]) setPriority(p)
   }, [searchParams])
 
   // debounce поиска 300мс
@@ -111,6 +114,7 @@ export default function BoardPage() {
     moveTask,
     changeStatus,
     createTask,
+    updateTask,
   } = useTasks(activeProjectId, {
     priority,
     search: debouncedSearch,
@@ -150,7 +154,8 @@ export default function BoardPage() {
     return list
   }, [tasks, assignees, special])
 
-  // Группировка по статусу
+  // Группировка по статусу. Внутри колонки: критические сверху,
+  // дальше по сроку, при равенстве — ручной порядок (position).
   const tasksByStatus = useMemo(() => {
     const map = {}
     for (const s of statuses) map[s.id] = []
@@ -158,6 +163,7 @@ export default function BoardPage() {
       if (!map[t.status_id]) map[t.status_id] = []
       map[t.status_id].push(t)
     }
+    for (const key of Object.keys(map)) map[key].sort(compareByPriorityAndDue)
     return map
   }, [statuses, visibleTasks])
 
@@ -178,6 +184,15 @@ export default function BoardPage() {
 
   // ---- Модалка создания задачи ----
   const [createOpen, setCreateOpen] = useState(false)
+
+  // ---- Быстрая смена приоритета (правый клик по карточке) ----
+  const [prioMenu, setPrioMenu] = useState(null) // { task, x, y }
+
+  const applyPriority = async (task, value) => {
+    const { error: err } = await updateTask(task.id, { priority: value })
+    if (err) toast.error(err)
+    else toast.success(`Приоритет: ${PRIORITY[value]?.label ?? value}`)
+  }
 
   // ---- Drag & drop ----
   const [activeTask, setActiveTask] = useState(null)
@@ -480,6 +495,9 @@ export default function BoardPage() {
                 onCancelAdd={() => setAddingColumnId(null)}
                 onSubmitAdd={handleSubmitAdd}
                 onOpenTask={setOpenTask}
+                onTaskContextMenu={(e, task) =>
+                  setPrioMenu({ task, x: e.clientX, y: e.clientY })
+                }
               />
             ))}
           </div>
@@ -489,6 +507,13 @@ export default function BoardPage() {
           </DragOverlay>
         </DndContext>
       )}
+
+      {/* Быстрая смена приоритета из карточки */}
+      <PriorityMenu
+        menu={prioMenu}
+        onSelect={applyPriority}
+        onClose={() => setPrioMenu(null)}
+      />
 
       {/* Модалка обязательного комментария при переходе в rework-статус */}
       <StatusCommentModal

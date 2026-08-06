@@ -9,9 +9,10 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { PRIORITY, DEADLINE_STATE } from '../../lib/constants'
+import { PRIORITY } from '../../lib/constants'
 import { formatDeadline, cn } from '../../lib/utils'
 import Avatar from '../ui/Avatar'
+import PriorityChip from '../ui/PriorityChip'
 
 // Цвет текста строки со сроком по состоянию дедлайна
 const DEADLINE_TEXT = {
@@ -22,7 +23,7 @@ const DEADLINE_TEXT = {
 
 // Карточка задачи на канбан-доске.
 // onOpen(task) — открытие TaskDrawer (без перехода на страницу).
-export default function TaskCard({ task, onOpen, overlay = false }) {
+export default function TaskCard({ task, onOpen, onContextMenu, overlay = false }) {
   const { user, isEmployee } = useAuth()
 
   // Сотрудник может тащить только свои задачи; остальные — нет
@@ -42,12 +43,12 @@ export default function TaskCard({ task, onOpen, overlay = false }) {
   })
 
   const prio = PRIORITY[task.priority]
-  const deadline = DEADLINE_STATE[task.deadline_state]
   const showPrioLabel = task.priority === 'high' || task.priority === 'critical'
   const deadlineText = DEADLINE_TEXT[task.deadline_state] ?? 'text-muted'
 
+  // Полоса слева — приоритет. Срок читается по цвету строки со сроком ниже.
   const style = {
-    borderLeftColor: deadline?.color ?? 'transparent',
+    borderLeftColor: prio?.stripe ?? 'transparent',
     ...(overlay
       ? {}
       : {
@@ -64,6 +65,11 @@ export default function TaskCard({ task, onOpen, overlay = false }) {
       {...attributes}
       {...listeners}
       onClick={() => !overlay && onOpen?.(task)}
+      onContextMenu={(e) => {
+        if (overlay || !onContextMenu) return
+        e.preventDefault()
+        onContextMenu(e, task)
+      }}
       className={cn(
         'rounded-lg border border-line border-l-4 bg-app p-3 text-left transition hover:border-accent',
         canDrag ? 'cursor-pointer' : 'cursor-not-allowed',
@@ -73,20 +79,7 @@ export default function TaskCard({ task, onOpen, overlay = false }) {
       {/* Верхняя строка: приоритет + номер */}
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5">
-          {prio && (
-            <span
-              className="h-2 w-2 flex-shrink-0 rounded-full"
-              style={{ backgroundColor: prio.color }}
-            />
-          )}
-          {prio && showPrioLabel && (
-            <span
-              className="truncate text-xs font-medium"
-              style={{ color: prio.color }}
-            >
-              {prio.label}
-            </span>
-          )}
+          {showPrioLabel && <PriorityChip priority={task.priority} size="xs" />}
         </span>
         <span className="flex-shrink-0 text-xs text-muted">#{task.number}</span>
       </div>

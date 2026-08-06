@@ -19,6 +19,7 @@ import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
+import { PRIORITY } from '../lib/constants'
 import { cn } from '../lib/utils'
 import TeamSummary from '../components/team/TeamSummary'
 import TeamColumn from '../components/team/TeamColumn'
@@ -34,8 +35,16 @@ export default function TeamPage() {
   const [pid, setPid] = useState('') // '' = все проекты
   const projectId = pid || null
 
-  const { columns, unassigned, allTasks, loading, error, reassignTask, patchTask } =
-    useTeam(projectId)
+  const {
+    columns,
+    unassigned,
+    allTasks,
+    loading,
+    error,
+    reassignTask,
+    patchTask,
+    patchTasks,
+  } = useTeam(projectId)
 
   useEffect(() => {
     if (error) toast.error(error)
@@ -108,6 +117,17 @@ export default function TeamPage() {
   const onFilter = (key) => {
     setFilter(key)
     if (key === 'unassigned') setPanelOpen(true)
+  }
+
+  // ---- Массовая смена приоритета выбранных задач ----
+  const doBulkPriority = async (ids, priority) => {
+    const res = await patchTasks(ids, { priority })
+    if (res.error) toast.error(res.error)
+    else
+      toast.success(
+        `Приоритет «${PRIORITY[priority]?.label ?? priority}» · задач: ${ids.length}`
+      )
+    return res
   }
 
   // ---- Переназначение ----
@@ -262,6 +282,7 @@ export default function TeamPage() {
         onToggle={() => setPanelOpen((v) => !v)}
         onAssign={doReassign}
         onOpen={setOpenTask}
+        onBulkPriority={doBulkPriority}
       />
 
       {/* Контекстное меню */}

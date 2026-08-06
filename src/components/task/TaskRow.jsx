@@ -6,11 +6,12 @@ import {
   Paperclip,
   CheckSquare,
 } from 'lucide-react'
-import { PRIORITY, DEADLINE_STATE } from '../../lib/constants'
+import { DEADLINE_STATE } from '../../lib/constants'
 import { formatDeadline, cn } from '../../lib/utils'
 import { useChangeStatus } from '../../hooks/useChangeStatus'
 import { useToast } from '../ui/Toast'
 import Button from '../ui/Button'
+import PriorityChip from '../ui/PriorityChip'
 import StatusCommentModal from '../board/StatusCommentModal'
 
 // Быстрое действие по коду текущего статуса
@@ -58,7 +59,6 @@ export default function TaskRow({ task, statuses = [], project = null, reason, o
     status_color: task.status_color,
   }
 
-  const prio = PRIORITY[task.priority]
   const deadline = DEADLINE_STATE[task.deadline_state]
   const action = QUICK_ACTION[cur.status_code]
   const targetStatus =
@@ -118,16 +118,7 @@ export default function TaskRow({ task, statuses = [], project = null, reason, o
                 {project.name}
               </span>
             )}
-            {prio && (
-              <span
-                className={cn(
-                  'rounded px-1.5 py-0.5 font-medium',
-                  prio.badge
-                )}
-              >
-                {prio.label}
-              </span>
-            )}
+            <PriorityChip priority={task.priority} />
             {task.due_date && (
               <span
                 className="flex items-center gap-1"

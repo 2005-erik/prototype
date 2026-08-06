@@ -16,6 +16,7 @@ export default function BoardColumn({
   onCancelAdd,
   onSubmitAdd,
   onOpenTask,
+  onTaskContextMenu,
 }) {
   const [title, setTitle] = useState('')
 
@@ -115,7 +116,12 @@ export default function BoardColumn({
           strategy={verticalListSortingStrategy}
         >
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onOpen={onOpenTask} />
+            <TaskCard
+              key={task.id}
+              task={task}
+              onOpen={onOpenTask}
+              onContextMenu={onTaskContextMenu}
+            />
           ))}
         </SortableContext>
 

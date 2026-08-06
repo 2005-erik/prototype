@@ -10,10 +10,12 @@ import {
   ChevronDown,
   ChevronRight,
   Sun,
+  Flame,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useMyDay, useMyTasks, useReworkReasons } from '../hooks/useMyDay'
 import { useProjects, useProjectStatusesMap } from '../hooks/useProjects'
+import { compareByPriorityAndDue } from '../lib/constants'
 import { formatDate, cn } from '../lib/utils'
 import Skeleton from '../components/ui/Skeleton'
 import EmptyState from '../components/ui/EmptyState'
@@ -102,6 +104,12 @@ export default function MyDayPage() {
       return out
     }
 
+    // Критические — первыми: срочность важнее того, в какой они стадии
+    const gCritical = take(
+      [...allMine]
+        .filter((t) => t.priority === 'critical')
+        .sort(compareByPriorityAndDue)
+    )
     const gRework = take(rework)
     const gOverdue = take(overdue)
     const gToday = take(today)
@@ -112,7 +120,15 @@ export default function MyDayPage() {
       (t) => t.deadline_state === 'no_deadline' && !seen.has(t.id)
     )
 
-    return { gRework, gOverdue, gToday, gInProgress, gSoon, gNoDeadline }
+    return {
+      gCritical,
+      gRework,
+      gOverdue,
+      gToday,
+      gInProgress,
+      gSoon,
+      gNoDeadline,
+    }
   }, [data, allMine])
 
   const reworkIds = useMemo(
@@ -160,6 +176,7 @@ export default function MyDayPage() {
   const nothing =
     !loading &&
     totalActive === 0 &&
+    groups.gCritical.length === 0 &&
     groups.gRework.length === 0 &&
     groups.gOverdue.length === 0 &&
     groups.gToday.length === 0 &&
@@ -199,6 +216,19 @@ export default function MyDayPage() {
         />
       ) : (
         <div className="space-y-4">
+          {/* 0. Критические — то, что горит по важности, а не по сроку */}
+          {groups.gCritical.length > 0 && (
+            <Section
+              icon={Flame}
+              title="Критические"
+              titleClass="text-red-400"
+              count={groups.gCritical.length}
+              danger
+            >
+              {groups.gCritical.map((t) => renderTask(t, reasons[t.id]))}
+            </Section>
+          )}
+
           {/* 1. Вернули на доработку */}
           {groups.gRework.length > 0 && (
             <Section

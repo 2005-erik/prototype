@@ -1,6 +1,7 @@
 import { useState, useMemo, Fragment } from 'react'
 import { ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import Avatar from '../ui/Avatar'
+import PriorityChip from '../ui/PriorityChip'
 import { LOAD_STATE, DEADLINE_STATE } from '../../lib/constants'
 import { formatDeadline, cn } from '../../lib/utils'
 
@@ -125,6 +126,7 @@ export default function TeamTable({ columns, members, onOpen, onReassign }) {
                                 <button type="button" onClick={() => onOpen(t)} className="min-w-0 flex-1 text-left">
                                   <span className="text-xs text-muted">#{t.number}</span>{' '}
                                   <span className="text-sm text-fg">{t.title}</span>
+                                  <PriorityChip priority={t.priority} size="xs" className="ml-2 align-middle" />
                                   {t.due_date && <span className="ml-2 text-xs" style={{ color: dl?.color }}>{formatDeadline(t.due_date)}</span>}
                                 </button>
                                 <select

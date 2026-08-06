@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
-import { ChevronUp, ChevronDown, Inbox } from 'lucide-react'
-import { LOAD_STATE, DEADLINE_STATE } from '../../lib/constants'
-import { formatDeadline, cn } from '../../lib/utils'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { ChevronUp, ChevronDown, Inbox, Flag } from 'lucide-react'
+import { LOAD_STATE, DEADLINE_STATE, PRIORITY } from '../../lib/constants'
+import { formatDeadline, plural, cn } from '../../lib/utils'
+import PriorityChip from '../ui/PriorityChip'
 
 // Выпадающий список сотрудников для назначения
 function AssignMenu({ members, onAssign }) {
@@ -57,19 +58,113 @@ function AssignMenu({ members, onAssign }) {
   )
 }
 
+// Панель массовых действий над отмеченными задачами
+function BulkBar({ count, onPriority, onClear }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  return (
+    <div className="mb-2 flex items-center gap-3 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5">
+      <span className="text-sm text-fg">
+        Выбрано: {count} {plural(count, 'задача', 'задачи', 'задач')}
+      </span>
+
+      <div className="relative ml-auto" ref={ref}>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1 text-xs font-medium text-on-accent transition hover:bg-accent-hover"
+        >
+          <Flag className="h-3.5 w-3.5" />
+          Приоритет
+        </button>
+        {open && (
+          <div className="absolute bottom-full right-0 z-20 mb-1 w-48 overflow-hidden rounded-lg border border-line bg-surface py-1 shadow-xl">
+            {Object.entries(PRIORITY).map(([key, val]) => {
+              const Icon = val.icon
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setOpen(false)
+                    onPriority(key)
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-fg transition hover:bg-line"
+                >
+                  <Icon className="h-3.5 w-3.5" style={{ color: val.color }} />
+                  {val.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onClear}
+        className="text-xs text-muted transition hover:text-fg"
+      >
+        Снять выделение
+      </button>
+    </div>
+  )
+}
+
 export default function UnassignedPanel({
   tasks = [],
   members = [],
   projectsById,
   onAssign,
   onOpen,
+  onBulkPriority,
   open,
   onToggle,
 }) {
+  const [selected, setSelected] = useState(() => new Set())
+
   // Сотрудники по возрастанию загрузки
   const sorted = [...members].sort(
     (a, b) => (a.load?.load_percent ?? 0) - (b.load?.load_percent ?? 0)
   )
+
+  // Из выделения убираем задачи, которых в панели уже нет (назначены/обновились)
+  const visibleIds = useMemo(() => new Set(tasks.map((t) => t.id)), [tasks])
+  useEffect(() => {
+    setSelected((prev) => {
+      const next = new Set([...prev].filter((id) => visibleIds.has(id)))
+      // Сравниваем поэлементно: размер мог совпасть при одновременной
+      // замене одной задачи другой
+      const same =
+        next.size === prev.size && [...prev].every((id) => next.has(id))
+      return same ? prev : next
+    })
+  }, [visibleIds])
+
+  const toggle = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const allSelected = tasks.length > 0 && selected.size === tasks.length
+
+  const applyPriority = async (priority) => {
+    const ids = [...selected]
+    const { error } = (await onBulkPriority?.(ids, priority)) ?? {}
+    if (!error) setSelected(new Set())
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-line bg-surface">
@@ -95,38 +190,78 @@ export default function UnassignedPanel({
               Все задачи распределены
             </p>
           ) : (
-            <div className="space-y-1.5">
-              {tasks.map((t) => {
-                const dl = DEADLINE_STATE[t.deadline_state]
-                return (
-                  <div
-                    key={t.id}
-                    className="flex items-center gap-3 rounded-lg border border-line border-l-4 bg-app px-3 py-1.5"
-                    style={{ borderLeftColor: dl?.color }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onOpen(t)}
-                      className="min-w-0 flex-1 text-left"
+            <>
+              {selected.size > 0 ? (
+                <BulkBar
+                  count={selected.size}
+                  onPriority={applyPriority}
+                  onClear={() => setSelected(new Set())}
+                />
+              ) : (
+                <label className="mb-2 flex cursor-pointer items-center gap-2 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(e) =>
+                      setSelected(
+                        e.target.checked ? new Set(tasks.map((t) => t.id)) : new Set()
+                      )
+                    }
+                    className="accent-[#ecc371]"
+                  />
+                  Выбрать все — для массовой смены приоритета
+                </label>
+              )}
+
+              <div className="space-y-1.5">
+                {tasks.map((t) => {
+                  const dl = DEADLINE_STATE[t.deadline_state]
+                  const prio = PRIORITY[t.priority]
+                  return (
+                    <div
+                      key={t.id}
+                      className={cn(
+                        'flex items-center gap-3 rounded-lg border border-line border-l-4 bg-app px-3 py-1.5',
+                        selected.has(t.id) && 'border-accent/60 bg-accent/5'
+                      )}
+                      style={{ borderLeftColor: prio?.stripe ?? 'transparent' }}
                     >
-                      <span className="text-xs text-muted">#{t.number}</span>{' '}
-                      <span className="text-sm text-fg">{t.title}</span>
-                      {projectsById?.[t.project_id] && (
-                        <span className="ml-2 rounded bg-line px-1.5 py-0.5 text-xs text-muted">
-                          {projectsById[t.project_id].name}
-                        </span>
-                      )}
-                      {t.due_date && (
-                        <span className="ml-2 text-xs" style={{ color: dl?.color }}>
-                          {formatDeadline(t.due_date)}
-                        </span>
-                      )}
-                    </button>
-                    <AssignMenu members={sorted} onAssign={(uid) => onAssign(t.id, uid)} />
-                  </div>
-                )
-              })}
-            </div>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(t.id)}
+                        onChange={() => toggle(t.id)}
+                        className="accent-[#ecc371]"
+                        aria-label={`Выбрать задачу №${t.number}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onOpen(t)}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <span className="text-xs text-muted">#{t.number}</span>{' '}
+                        <span className="text-sm text-fg">{t.title}</span>
+                        <PriorityChip
+                          priority={t.priority}
+                          size="xs"
+                          className="ml-2 align-middle"
+                        />
+                        {projectsById?.[t.project_id] && (
+                          <span className="ml-2 rounded bg-line px-1.5 py-0.5 text-xs text-muted">
+                            {projectsById[t.project_id].name}
+                          </span>
+                        )}
+                        {t.due_date && (
+                          <span className="ml-2 text-xs" style={{ color: dl?.color }}>
+                            {formatDeadline(t.due_date)}
+                          </span>
+                        )}
+                      </button>
+                      <AssignMenu members={sorted} onAssign={(uid) => onAssign(t.id, uid)} />
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </div>
       )}

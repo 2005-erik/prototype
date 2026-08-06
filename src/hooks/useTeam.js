@@ -197,6 +197,26 @@ export function useTeam(projectId) {
     [tasks]
   )
 
+  // Массовая правка (смена приоритета у выбранных) — одним запросом
+  const patchTasks = useCallback(
+    async (taskIds, patch) => {
+      if (!taskIds?.length) return { error: null }
+      const prev = tasks
+      const ids = new Set(taskIds)
+      setTasks((ts) => ts.map((t) => (ids.has(t.id) ? { ...t, ...patch } : t)))
+      const { error: err } = await supabase
+        .from('tasks')
+        .update(patch)
+        .in('id', taskIds)
+      if (err) {
+        setTasks(prev)
+        return { error: err.message }
+      }
+      return { error: null }
+    },
+    [tasks]
+  )
+
   return {
     columns,
     unassigned,
@@ -206,5 +226,6 @@ export function useTeam(projectId) {
     refetch: fetchTeam,
     reassignTask,
     patchTask,
+    patchTasks,
   }
 }

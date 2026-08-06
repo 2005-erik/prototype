@@ -1,14 +1,14 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Clock } from 'lucide-react'
-import { PRIORITY, DEADLINE_STATE } from '../../lib/constants'
+import { DEADLINE_STATE } from '../../lib/constants'
+import PriorityChip from '../ui/PriorityChip'
 import { formatDeadline, cn } from '../../lib/utils'
 
 export default function TeamTaskCard({ task, projectName, onOpen, onContextMenu, overlay }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id, data: { type: 'task' }, disabled: overlay })
 
-  const prio = PRIORITY[task.priority]
   const deadline = DEADLINE_STATE[task.deadline_state]
 
   const style = {
@@ -37,9 +37,7 @@ export default function TeamTaskCard({ task, projectName, onOpen, onContextMenu,
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-xs text-muted">#{task.number}</span>
-        {prio && (
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: prio.color }} title={prio.label} />
-        )}
+        <PriorityChip priority={task.priority} size="xs" />
       </div>
       <p className="line-clamp-2 text-sm text-fg">{task.title}</p>
       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">

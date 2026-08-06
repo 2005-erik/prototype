@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ListTodo, AlertTriangle, Clock, Pause, Download, Users } from 'lucide-react'
+import {
+  ListTodo,
+  AlertTriangle,
+  Clock,
+  Pause,
+  Download,
+  Users,
+  Flame,
+} from 'lucide-react'
 import { useProjectNav } from '../contexts/ProjectNavContext'
 import { useProjects, useProject } from '../hooks/useProjects'
 import { useTasks } from '../hooks/useTasks'
@@ -68,7 +76,11 @@ export default function ManagerDashboard() {
       (t) => !t.completed_at && isSameDay(t.due_date)
     ).length
     const stale = tasks.filter((t) => t.is_stale).length
-    return { active, overdue, dueToday, stale }
+    // Критические в работе — незавершённые задачи наивысшего приоритета
+    const critical = tasks.filter(
+      (t) => !t.completed_at && t.priority === 'critical'
+    ).length
+    return { active, overdue, dueToday, stale, critical }
   }, [tasks])
 
   // Тренд входящих задач за период (для карточки «активных»)
@@ -185,7 +197,14 @@ export default function ManagerDashboard() {
       </div>
 
       {/* Блок 1 — метрики */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <MetricCard
+          icon={Flame}
+          label="Критических в работе"
+          value={metrics.critical}
+          accent="red"
+          onClick={() => goBoard('priority=critical')}
+        />
         <MetricCard
           icon={ListTodo}
           label="Активных задач"
