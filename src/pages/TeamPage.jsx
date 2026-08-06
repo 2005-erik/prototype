@@ -6,6 +6,7 @@ import {
   useManagedProjectMembers,
 } from '../hooks/useProjects'
 import { useTeam } from '../hooks/useTeam'
+import { isInWork, isAwaitingReview } from '../lib/constants'
 import { useAuth } from '../contexts/AuthContext'
 import Select from '../components/ui/Select'
 import Skeleton from '../components/ui/Skeleton'
@@ -17,10 +18,37 @@ import { cn } from '../lib/utils'
 import TeamSummary from '../components/team/TeamSummary'
 import { TeamMemberCard, UnassignedCard } from '../components/team/TeamMemberCard'
 import MemberTasksDrawer from '../components/team/MemberTasksDrawer'
+import TeamTaskList from '../components/team/TeamTaskList'
 import TeamTable from '../components/team/TeamTable'
 import UnassignedPanel from '../components/team/UnassignedPanel'
 import TaskContextMenu from '../components/team/TaskContextMenu'
 import TaskDrawer from '../components/task/TaskDrawer'
+
+// Списки за счётчиками сводки. Условия те же, что в totals,
+// иначе число в чипе разойдётся с длиной списка.
+const TASK_LISTS = {
+  in_work: {
+    title: 'Задачи в работе',
+    pick: (t, statusById, members) =>
+      members.has(t.assignee_id) && isInWork(statusById[t.status_id]),
+  },
+  review: {
+    title: 'Задачи на проверке',
+    pick: (t, statusById, members) =>
+      members.has(t.assignee_id) && isAwaitingReview(statusById[t.status_id]),
+  },
+  queued: {
+    title: 'Задачи в очереди',
+    pick: (t, statusById, members) =>
+      members.has(t.assignee_id) &&
+      !isInWork(statusById[t.status_id]) &&
+      !isAwaitingReview(statusById[t.status_id]),
+  },
+  overdue: {
+    title: 'Просроченные задачи',
+    pick: (t) => t.deadline_state === 'overdue',
+  },
+}
 
 export default function TeamPage() {
   const { toast } = useToast()
@@ -39,6 +67,7 @@ export default function TeamPage() {
     patchTask,
     patchTasks,
     refetch,
+    statusById,
   } = useTeam(projectId)
 
   useEffect(() => {
@@ -55,6 +84,8 @@ export default function TeamPage() {
 
   // Задачи сотрудника открываются в панели справа — сетка не прыгает
   const [memberDrawer, setMemberDrawer] = useState(null)
+  // Срез задач за счётчиком сводки: 'in_work' | 'review' | 'queued' | 'overdue'
+  const [taskList, setTaskList] = useState(null)
 
   const projectsById = useMemo(() => {
     const m = {}
@@ -85,11 +116,32 @@ export default function TeamPage() {
     [allTasks, columns, unassigned]
   )
 
+  // Кому задача засчитана в сводке: только участникам проекта —
+  // иначе список окажется длиннее числа в чипе
+  const memberIds = useMemo(
+    () => new Set(columns.map((c) => c.user_id)),
+    [columns]
+  )
+
+  const listTasks = useMemo(() => {
+    const cfg = TASK_LISTS[taskList]
+    if (!cfg) return []
+    return allTasks.filter((t) => cfg.pick(t, statusById, memberIds))
+  }, [taskList, allTasks, statusById, memberIds])
+
+  // «Без исполнителя» — не список, а экран распределения
+  const openList = (kind) => {
+    if (kind === 'unassigned') {
+      setPanelOpen(true)
+      return
+    }
+    setTaskList(kind)
+  }
+
   const showAllProjects = projectId === null
 
   // Фильтрация отображения
   const nameQ = search.trim().toLowerCase()
-  const overdueOnly = filter === 'overdue'
 
   const displayColumns = useMemo(() => {
     let cols = columns
@@ -98,22 +150,14 @@ export default function TeamPage() {
     if (filter === 'high') cols = cols.filter((c) => c.load.load_state === 'high')
     if (filter === 'overloaded')
       cols = cols.filter((c) => c.load.load_state === 'overloaded')
-    if (overdueOnly)
-      cols = cols.map((c) => ({
-        ...c,
-        tasks: c.tasks.filter((t) => t.deadline_state === 'overdue'),
-      }))
     return cols
-  }, [columns, nameQ, filter, overdueOnly])
+  }, [columns, nameQ, filter])
 
-  const displayUnassigned = useMemo(
-    () => (overdueOnly ? unassigned.filter((t) => t.deadline_state === 'overdue') : unassigned),
-    [unassigned, overdueOnly]
-  )
+  const displayUnassigned = unassigned
 
   const onFilter = (key) => {
+    setTaskList(null) // фильтр по людям — значит, снова карточки
     setFilter(key)
-    if (key === 'unassigned') setPanelOpen(true)
   }
 
   // ---- Массовая смена приоритета выбранных задач ----
@@ -208,10 +252,24 @@ export default function TeamPage() {
       </div>
 
       {/* Сводка */}
-      <TeamSummary totals={totals} filter={filter} onFilter={onFilter} />
+      <TeamSummary
+        totals={totals}
+        filter={filter}
+        onFilter={onFilter}
+        onOpenList={openList}
+      />
 
       {/* Контент */}
-      {columns.length === 0 ? (
+      {taskList ? (
+        <TeamTaskList
+          title={TASK_LISTS[taskList].title}
+          tasks={listTasks}
+          projectsById={showAllProjects ? projectsById : null}
+          onOpen={setOpenTask}
+          onContextMenu={(e, task) => setMenu({ task, x: e.clientX, y: e.clientY })}
+          onBack={() => setTaskList(null)}
+        />
+      ) : columns.length === 0 ? (
         <EmptyState icon={Users} title="В проекте нет участников" />
       ) : view === 'table' ? (
         <TeamTable

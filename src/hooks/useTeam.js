@@ -236,6 +236,7 @@ export function useTeam(projectId) {
     columns,
     unassigned,
     allTasks: tasks,
+    statusById,
     loading,
     error,
     refetch: fetchTeam,
