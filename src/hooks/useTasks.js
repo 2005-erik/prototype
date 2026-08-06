@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { purgeStorageSoon } from '../lib/storageCleanup'
 import { sanitizeSearchTerm } from '../lib/utils'
 
 // ---------------------------------------------------------------------
@@ -224,6 +225,8 @@ export function useTasks(projectId, filters = {}) {
       try {
         const { error: err } = await supabase.from('tasks').delete().eq('id', id)
         if (err) throw err
+        // Файлы задачи остаются в Storage — просим сервер их убрать
+        purgeStorageSoon()
         await fetchTasks()
         return { error: null }
       } catch (err) {

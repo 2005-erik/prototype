@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { purgeStorageSoon } from '../lib/storageCleanup'
 
 // Извлечение понятного сообщения из ошибки Edge Function
 async function readError(error) {
@@ -46,6 +47,7 @@ export function useTrelloImport() {
         p_import_id: importId,
       })
       if (error) throw error
+      purgeStorageSoon()
       return { data }
     } catch (err) {
       return { error: err.message ?? 'Не удалось отменить импорт' }

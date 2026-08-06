@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { purgeStorageSoon } from '../lib/storageCleanup'
 
 // ---------------------------------------------------------------------
 // useProjects — список проектов текущего пользователя
@@ -126,6 +127,8 @@ export function useProjects({ includeArchived = false } = {}) {
           .eq('id', id)
 
         if (err) throw err
+        // Вложения всех задач проекта — из Storage вдогонку
+        purgeStorageSoon()
         await fetchProjects()
         return { error: null }
       } catch (err) {
