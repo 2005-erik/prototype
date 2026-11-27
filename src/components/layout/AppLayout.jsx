@@ -25,6 +25,9 @@ import {
   AlertTriangle,
   ScrollText,
   Import,
+  FileText,
+  AtSign,
+  ClipboardList,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -45,6 +48,9 @@ const NOTIF_ICON = {
   comment: MessageSquare,
   due_soon: Clock,
   overdue: AlertTriangle,
+  doc_assigned: ClipboardList,
+  doc_mention: AtSign,
+  doc_comment: MessageSquare,
 }
 
 // ---------------------------------------------------------------------
@@ -154,11 +160,12 @@ function NotificationsBell({ userId }) {
     }
   }
 
-  // Клик по уведомлению: пометить прочитанным + открыть задачу
+  // Клик по уведомлению: пометить прочитанным + открыть задачу или документ
   const onItemClick = async (n) => {
     if (!n.is_read) await markRead(n.id)
     setOpen(false)
     if (n.task_id) navigate(`/task/${n.task_id}`)
+    else if (n.document_id) navigate(`/document/${n.document_id}`)
   }
 
   return (
@@ -258,11 +265,13 @@ export default function AppLayout() {
     ? [
         { to: '/', label: 'Мой день', icon: Sun, end: true },
         { to: '/my-tasks', label: 'Мои задачи', icon: CheckSquare },
+        { to: '/documents', label: 'Документы', icon: FileText },
       ]
     : [
         { to: '/', label: 'Дашборд', icon: LayoutDashboard, end: true },
         { to: '/projects', label: 'Проекты', icon: FolderKanban },
         { to: '/board', label: 'Доска задач', icon: Kanban },
+        { to: '/documents', label: 'Документы', icon: FileText },
         { to: '/team', label: 'Сотрудники', icon: Users },
         { to: '/analytics', label: 'Аналитика', icon: BarChart3 },
       ]
@@ -294,6 +303,7 @@ export default function AppLayout() {
     '/team': 'Сотрудники',
     '/analytics': 'Аналитика',
     '/my-tasks': 'Мои задачи',
+    '/documents': 'Документы',
     '/profile': 'Профиль',
     '/admin/users': 'Пользователи',
     '/admin/import-trello': 'Импорт из Trello',
@@ -301,6 +311,9 @@ export default function AppLayout() {
   }
   const pageTitle =
     titleMap[location.pathname] ??
+    // Отдельный документ лежит на /document/:id — под пункт меню
+    // «/documents» он не подходит, поэтому разбираем его явно
+    (location.pathname.startsWith('/document/') ? 'Документ' : null) ??
     nav.find((n) => !n.end && location.pathname.startsWith(n.to))?.label ??
     'Азимут'
 

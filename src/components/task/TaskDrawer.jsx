@@ -34,6 +34,7 @@ import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { SkeletonText } from '../ui/Skeleton'
 import { useToast } from '../ui/Toast'
+import TaskDocuments from '../document/TaskDocuments'
 
 function formatBytes(bytes) {
   if (!bytes) return ''
@@ -669,6 +670,14 @@ export default function TaskDrawer({ task: initial, statuses = [], members = [],
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* Документы, где упомянута задача */}
+          <section>
+            <label className="mb-2 block text-xs font-medium uppercase text-muted">
+              Документы
+            </label>
+            <TaskDocuments taskId={t?.id} />
           </section>
 
           {/* Комментарии */}

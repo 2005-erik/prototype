@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronDown, Settings, LayoutGrid, Check } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
+// basePath — куда ведёт выбор проекта: доска или документы проекта
 export default function ProjectSelector({
   projects,
   activeProjectId,
   metrics = {},
   isManager,
+  basePath = '/board',
 }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -59,7 +61,7 @@ export default function ProjectSelector({
                   type="button"
                   onClick={() => {
                     setOpen(false)
-                    navigate(`/board/${p.id}`)
+                    navigate(`${basePath}/${p.id}`)
                   }}
                   className={cn(
                     'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition hover:bg-line',

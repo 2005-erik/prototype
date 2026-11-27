@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
@@ -18,6 +19,27 @@ import AuthLogPage from './pages/AuthLogPage'
 import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
 import { OfflineNotice, UpdateBanner } from './components/layout/PwaBanners'
+import { AzimutSpinner } from './components/ui/AzimutLoader'
+
+// Экраны документов грузятся отдельным чанком: редактор текста тянет
+// за собой TipTap, а он нужен только здесь и заметно весит.
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'))
+const DocumentPage = lazy(() => import('./pages/DocumentPage'))
+
+// Ожидание чанка внутри каркаса: сайдбар и шапка остаются на месте
+function Lazy({ children }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-20">
+          <AzimutSpinner size={48} />
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  )
+}
 
 // Роли для доски/аналитики/команды
 const MANAGERS = ['admin', 'manager']
@@ -79,6 +101,33 @@ function App() {
 
             {/* Мои задачи — все роли */}
             <Route path="/my-tasks" element={<MyTasksPage />} />
+
+            {/* Документы — все роли: сотрудник ведёт свои разделы.
+                Права на правку решает RLS и проверки внутри экрана. */}
+            <Route
+              path="/documents"
+              element={
+                <Lazy>
+                  <DocumentsPage />
+                </Lazy>
+              }
+            />
+            <Route
+              path="/documents/:projectId"
+              element={
+                <Lazy>
+                  <DocumentsPage />
+                </Lazy>
+              }
+            />
+            <Route
+              path="/document/:documentId"
+              element={
+                <Lazy>
+                  <DocumentPage />
+                </Lazy>
+              }
+            />
 
             {/* Сотрудники — только руководители */}
             <Route
